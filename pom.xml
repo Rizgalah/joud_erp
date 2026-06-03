@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                             https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- ═══════════════════════════════════════════
+         معلومات المشروع
+    ═══════════════════════════════════════════ -->
+    <groupId>com.joud</groupId>
+    <artifactId>joud-core</artifactId>
+    <version>1.0.0</version>
+    <packaging>jar</packaging>
+
+    <name>Joud Core Shell</name>
+    <description>القلب الثابت — واجهة القابس، الأمان، ماكنة التقارير</description>
+
+    <!-- ═══════════════════════════════════════════
+         إعدادات Java 21
+    ═══════════════════════════════════════════ -->
+    <properties>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+        <!-- إصدارات المكتبات -->
+        <jakarta.version>10.0.0</jakarta.version>
+        <hibernate.version>6.4.4.Final</hibernate.version>
+        <postgresql.version>42.7.3</postgresql.version>
+        <jasper.version>6.21.0</jasper.version>
+        <poi.version>5.2.5</poi.version>
+        <bcrypt.version>0.10.2</bcrypt.version>
+        <junit.version>5.10.2</junit.version>
+    </properties>
+
+    <dependencies>
+
+        <!-- ─── Jakarta EE 10 (مقدم من Tomcat/Server) ─── -->
+        <dependency>
+            <groupId>jakarta.platform</groupId>
+            <artifactId>jakarta.jakartaee-api</artifactId>
+            <version>${jakarta.version}</version>
+            <!-- provided: الـ Server يوفرها، لا نضمها في الـ jar -->
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- ─── Hibernate ORM (JPA Implementation) ─── -->
+        <dependency>
+            <groupId>org.hibernate.orm</groupId>
+            <artifactId>hibernate-core</artifactId>
+            <version>${hibernate.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- ─── PostgreSQL Driver ─── -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>${postgresql.version}</version>
+        </dependency>
+
+        <!-- ─── JasperReports (ماكنة التقارير) ─── -->
+        <dependency>
+            <groupId>net.sf.jasperreports</groupId>
+            <artifactId>jasperreports</artifactId>
+            <version>${jasper.version}</version>
+        </dependency>
+
+        <!-- ─── Apache POI (تصدير Excel) ─── -->
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi-ooxml</artifactId>
+            <version>${poi.version}</version>
+        </dependency>
+
+        <!-- ─── BCrypt (تشفير كلمات المرور) ─── -->
+        <dependency>
+            <groupId>at.favre.lib</groupId>
+            <artifactId>bcrypt</artifactId>
+            <version>${bcrypt.version}</version>
+        </dependency>
+
+        <!-- ─── JUnit 5 (اختبارات) ─── -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>${junit.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+    </dependencies>
+
+    <!-- ═══════════════════════════════════════════
+         إعدادات البناء
+    ═══════════════════════════════════════════ -->
+    <build>
+        <plugins>
+            <!-- تجميع الكود -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.13.0</version>
+                <configuration>
+                    <release>21</release>
+                    <encoding>UTF-8</encoding>
+                </configuration>
+            </plugin>
+
+            <!-- تشغيل الاختبارات -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.2.5</version>
+            </plugin>
+
+            <!-- بناء jar مع المصادر للوحدات الأخرى -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <version>3.3.1</version>
+                <executions>
+                    <execution>
+                        <id>attach-sources</id>
+                        <goals><goal>jar</goal></goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>

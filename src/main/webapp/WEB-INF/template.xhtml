@@ -1,0 +1,230 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="jakarta.faces.html"
+      xmlns:f="jakarta.faces.core"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:ui="jakarta.faces.facelets"
+      lang="ar" dir="rtl">
+
+<h:head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+
+    <!-- PrimeFaces Theme -->
+    <h:outputStylesheet library="primefaces" name="themes/saga/theme.css"/>
+    <!-- PrimeIcons -->
+    <h:outputStylesheet library="primefaces" name="primeicons/primeicons.css"/>
+    <!-- Joud Theme -->
+    <h:outputStylesheet library="css" name="joud-theme.css"/>
+
+    <title>
+        <ui:insert name="pageTitle">Joud ERP</ui:insert>
+    </title>
+
+    <!-- صفحات الأبناء تضيف CSS خاص بها هنا -->
+    <ui:insert name="extraStyles"/>
+</h:head>
+
+<h:body>
+<div class="joud-layout" id="joudLayout">
+
+    <!-- ═══════════════════════════════════════
+         القائمة الجانبية (Sidebar)
+    ═══════════════════════════════════════ -->
+    <aside class="joud-sidebar" id="joudSidebar">
+
+        <!-- اللوغو + اسم النظام -->
+        <div class="sidebar-logo">
+            <div class="logo-icon">J</div>
+            <span class="logo-text">Joud ERP</span>
+        </div>
+
+        <!-- القائمة الديناميكية -->
+        <nav class="sidebar-nav" id="sidebarNav">
+
+            <!-- عنصر الرئيسية دائم -->
+            <h:link outcome="/index" styleClass="nav-item #{request.servletPath == '/index.xhtml' ? 'active' : ''}">
+                <i class="pi pi-home nav-icon"/>
+                <span class="nav-label">الرئيسية</span>
+            </h:link>
+
+            <!-- ─── وحدات مثبتة (ديناميكية) ─── -->
+            <ui:repeat value="#{navbarBean.menuItems}" var="item">
+
+                <!-- عنصر بدون أبناء -->
+                <ui:fragment rendered="#{not item.hasChildren()}">
+                    <h:link outcome="#{item.outcome}"
+                            styleClass="nav-item #{request.servletPath.startsWith(item.outcome) ? 'active' : ''}">
+                        <i class="#{item.icon} nav-icon"/>
+                        <span class="nav-label">#{item.label}</span>
+                    </h:link>
+                </ui:fragment>
+
+                <!-- عنصر مع قائمة فرعية -->
+                <ui:fragment rendered="#{item.hasChildren()}">
+                    <div class="nav-item" onclick="toggleSubmenu(this)">
+                        <i class="#{item.icon} nav-icon"/>
+                        <span class="nav-label">#{item.label}</span>
+                        <i class="pi pi-angle-left nav-arrow"/>
+                    </div>
+                    <div class="nav-submenu">
+                        <ui:repeat value="#{item.children}" var="child">
+                            <h:link outcome="#{child.outcome}" styleClass="nav-item">
+                                <i class="#{child.icon} nav-icon"/>
+                                <span class="nav-label">#{child.label}</span>
+                            </h:link>
+                        </ui:repeat>
+                    </div>
+                </ui:fragment>
+
+            </ui:repeat>
+
+        </nav>
+
+        <!-- Footer القائمة -->
+        <div class="sidebar-footer">
+            <h:form>
+                <p:commandLink action="#{loginBean.logout}"
+                               styleClass="nav-item"
+                               ajax="false">
+                    <i class="pi pi-sign-out nav-icon"/>
+                    <span class="nav-label">تسجيل الخروج</span>
+                </p:commandLink>
+            </h:form>
+        </div>
+
+    </aside>
+
+    <!-- ═══════════════════════════════════════
+         المنطقة الرئيسية
+    ═══════════════════════════════════════ -->
+    <div class="joud-main" id="joudMain">
+
+        <!-- ─── Header ──────────────────────── -->
+        <header class="joud-header">
+
+            <!-- يمين: زر طي القائمة + عنوان الصفحة -->
+            <div class="header-right">
+                <button class="header-btn" onclick="toggleSidebar()" title="طي القائمة">
+                    <i class="pi pi-bars"/>
+                </button>
+                <span class="header-title">
+                    <ui:insert name="pageTitle">الرئيسية</ui:insert>
+                </span>
+            </div>
+
+            <!-- يسار: التاريخ + إشعارات + المستخدم -->
+            <div class="header-left">
+
+                <!-- التاريخ -->
+                <span class="header-date">
+                    #{navbarBean.currentDayName} — #{navbarBean.currentDate}
+                </span>
+
+                <!-- زر الإشعارات -->
+                <button class="header-btn" title="الإشعارات" style="position:relative">
+                    <i class="pi pi-bell"/>
+                </button>
+
+                <!-- معلومات المستخدم -->
+                <div class="user-menu" onclick="toggleUserMenu()">
+                    <div class="user-avatar">#{navbarBean.currentUserInitials}</div>
+                    <div>
+                        <div class="user-name">#{navbarBean.currentUsername}</div>
+                        <div class="user-role">#{navbarBean.currentUserRole}</div>
+                    </div>
+                    <i class="pi pi-angle-down" style="color:rgba(255,255,255,0.6);font-size:11px"/>
+                </div>
+
+            </div>
+        </header>
+
+        <!-- ─── المحتوى ──────────────────────── -->
+        <main class="joud-content">
+
+            <!-- Breadcrumb اختياري -->
+            <ui:insert name="breadcrumb"/>
+
+            <!-- رسائل عامة -->
+            <p:growl id="globalGrowl" life="4000" showDetail="true"/>
+
+            <!-- محتوى الصفحة -->
+            <ui:insert name="content">
+                <p style="color:#888;text-align:center;padding:60px">
+                    لا يوجد محتوى لعرضه
+                </p>
+            </ui:insert>
+
+        </main>
+
+    </div><!-- /joud-main -->
+
+</div><!-- /joud-layout -->
+
+<!-- ═══════════════════════════════════════
+     JavaScript
+═══════════════════════════════════════ -->
+<script>
+    // ─── طي/فتح القائمة الجانبية ────────────────────
+    function toggleSidebar() {
+        var sidebar = document.getElementById('joudSidebar');
+        sidebar.classList.toggle('collapsed');
+        // حفظ الحالة في localStorage
+        localStorage.setItem('sidebarCollapsed',
+            sidebar.classList.contains('collapsed') ? '1' : '0');
+    }
+
+    // استعادة حالة القائمة عند التحميل
+    window.addEventListener('DOMContentLoaded', function () {
+        if (localStorage.getItem('sidebarCollapsed') === '1') {
+            document.getElementById('joudSidebar').classList.add('collapsed');
+        }
+        // تمييز العنصر النشط
+        highlightActive();
+    });
+
+    // ─── القوائم الفرعية ────────────────────────────
+    function toggleSubmenu(el) {
+        el.classList.toggle('open');
+        var sub = el.nextElementSibling;
+        if (sub && sub.classList.contains('nav-submenu')) {
+            sub.classList.toggle('open');
+        }
+    }
+
+    // ─── تمييز العنصر النشط ────────────────────────
+    function highlightActive() {
+        var path = window.location.pathname;
+        document.querySelectorAll('.nav-item').forEach(function (item) {
+            var link = item.getAttribute('href') || '';
+            if (link && path.includes(link.split('?')[0])) {
+                item.classList.add('active');
+                // افتح القائمة الفرعية إذا كان العنصر النشط بداخلها
+                var sub = item.closest('.nav-submenu');
+                if (sub) {
+                    sub.classList.add('open');
+                    var parent = sub.previousElementSibling;
+                    if (parent) parent.classList.add('open');
+                }
+            }
+        });
+    }
+
+    // ─── قائمة المستخدم ────────────────────────────
+    function toggleUserMenu() {
+        // يمكن تطويرها لاحقاً بـ PrimeFaces OverlayPanel
+        console.log('user menu');
+    }
+
+    // ─── Mobile Sidebar ─────────────────────────────
+    if (window.innerWidth <= 768) {
+        document.getElementById('joudSidebar').classList.remove('collapsed');
+    }
+</script>
+
+<!-- صفحات الأبناء تضيف JS خاص بها هنا -->
+<ui:insert name="extraScripts"/>
+
+</h:body>
+</html>
