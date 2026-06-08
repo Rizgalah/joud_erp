@@ -11,7 +11,7 @@
     <groupId>com.joud</groupId>
     <artifactId>joud-core</artifactId>
     <version>1.0.0</version>
-    <packaging>jar</packaging>
+    <packaging>war</packaging>
 
     <name>Joud Core Shell</name>
     <description>القلب الثابت — واجهة القابس، الأمان، ماكنة التقارير</description>
@@ -89,12 +89,26 @@
             <scope>test</scope>
         </dependency>
 
+        <!-- ─── SLF4J & Logback (Logger) ─── -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>2.0.12</version>
+        </dependency>
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+            <version>1.5.3</version>
+        </dependency>
+
     </dependencies>
 
     <!-- ═══════════════════════════════════════════
          إعدادات البناء
     ═══════════════════════════════════════════ -->
     <build>
+        <!-- اسم الملف النهائي لدعم النشر المتوازي في Tomcat (Parallel Deployment) -->
+        <finalName>joud##${project.version}</finalName>
         <plugins>
             <!-- تجميع الكود -->
             <plugin>
@@ -125,6 +139,16 @@
                         <goals><goal>jar</goal></goals>
                     </execution>
                 </executions>
+            </plugin>
+
+            <!-- بناء ملف WAR للنشر على Tomcat -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-war-plugin</artifactId>
+                <version>3.4.0</version>
+                <configuration>
+                    <failOnMissingWebXml>false</failOnMissingWebXml>
+                </configuration>
             </plugin>
         </plugins>
     </build>
