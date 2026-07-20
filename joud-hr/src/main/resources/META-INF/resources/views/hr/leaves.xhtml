@@ -1,0 +1,216 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="jakarta.faces.html"
+      xmlns:f="jakarta.faces.core"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:ui="jakarta.faces.facelets"
+      lang="ar" dir="rtl">
+
+<ui:composition template="/WEB-INF/template.xhtml">
+<ui:define name="pageTitle">الإجازات</ui:define>
+
+<ui:define name="extraStyles">
+    <h:outputStylesheet library="css" name="hr.css"/>
+</ui:define>
+
+<ui:define name="content">
+<h:form id="lvForm">
+<p:growl id="msgs" life="4000" showDetail="true"/>
+
+<div style="display:grid;grid-template-columns:360px 1fr;gap:16px">
+
+    <!-- ══════════════════════════════════════════
+         يمين: نموذج تقديم طلب جديد
+    ══════════════════════════════════════════ -->
+    <div>
+        <div class="joud-card">
+            <div class="joud-card-header">
+                <span class="joud-card-title">
+                    <i class="pi pi-calendar-plus" style="margin-left:8px;color:#2E75B6"/>
+                    تقديم طلب إجازة
+                </span>
+            </div>
+
+            <div style="display:grid;gap:14px">
+
+                <div>
+                    <label class="field-label">الموظف *</label>
+                    <p:selectOneMenu value="#{leaveBean.employeeId}" style="width:100%"
+                                     filter="true">
+                        <f:selectItem itemLabel="— اختر الموظف —" itemValue="#{null}"/>
+                        <f:selectItems value="#{leaveBean.employees}"
+                                       var="e" itemValue="#{e[0]}" itemLabel="#{e[1]}"/>
+                    </p:selectOneMenu>
+                </div>
+
+                <div>
+                    <label class="field-label">نوع الإجازة *</label>
+                    <p:selectOneMenu value="#{leaveBean.leaveTypeId}" style="width:100%">
+                        <f:selectItem itemLabel="— اختر النوع —" itemValue="#{null}"/>
+                        <f:selectItems value="#{leaveBean.leaveTypes}"
+                                       var="t" itemValue="#{t.id}" itemLabel="#{t.name}"/>
+                    </p:selectOneMenu>
+                </div>
+
+                <div>
+                    <label class="field-label">من تاريخ *</label>
+                    <p:datePicker value="#{leaveBean.dateFrom}" pattern="dd/MM/yyyy"
+                                  style="width:100%" showIcon="true">
+                        <p:ajax event="dateSelect" listener="#{leaveBean.onDatesChange}"
+                                update="lvForm:daysFld"/>
+                    </p:datePicker>
+                </div>
+
+                <div>
+                    <label class="field-label">إلى تاريخ *</label>
+                    <p:datePicker value="#{leaveBean.dateTo}" pattern="dd/MM/yyyy"
+                                  style="width:100%" showIcon="true">
+                        <p:ajax event="dateSelect" listener="#{leaveBean.onDatesChange}"
+                                update="lvForm:daysFld"/>
+                    </p:datePicker>
+                </div>
+
+                <div>
+                    <label class="field-label">عدد الأيام</label>
+                    <p:inputText id="daysFld" value="#{leaveBean.days}"
+                                 style="width:100%" readonly="true"/>
+                </div>
+
+                <div>
+                    <label class="field-label">السبب</label>
+                    <p:inputTextarea value="#{leaveBean.reason}" style="width:100%" rows="3"/>
+                </div>
+
+                <p:commandButton value="تقديم الطلب" icon="pi pi-send"
+                    styleClass="p-button-success" style="width:100%"
+                    action="#{leaveBean.submit}"
+                    update="lvForm" ajax="true"/>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════
+         يسار: قائمة الطلبات + رصيد الإجازات
+    ══════════════════════════════════════════ -->
+    <div>
+
+        <!-- فلتر الحالة -->
+        <div class="joud-card" style="margin-bottom:14px">
+            <div style="display:flex;gap:4px;background:#f0f4f8;padding:4px;border-radius:8px">
+                <p:commandButton value="معلَّقة" styleClass="#{leaveBean.filterStatus=='P'?'p-button-warning':'p-button-text p-button-plain'}">
+                    <f:setPropertyActionListener target="#{leaveBean.filterStatus}" value="P"/>
+                    <p:ajax listener="#{leaveBean.search}" update="lvForm:reqTable"/>
+                </p:commandButton>
+                <p:commandButton value="معتمدة" styleClass="#{leaveBean.filterStatus=='A'?'p-button-success':'p-button-text p-button-plain'}">
+                    <f:setPropertyActionListener target="#{leaveBean.filterStatus}" value="A"/>
+                    <p:ajax listener="#{leaveBean.search}" update="lvForm:reqTable"/>
+                </p:commandButton>
+                <p:commandButton value="مرفوضة" styleClass="#{leaveBean.filterStatus=='R'?'p-button-danger':'p-button-text p-button-plain'}">
+                    <f:setPropertyActionListener target="#{leaveBean.filterStatus}" value="R"/>
+                    <p:ajax listener="#{leaveBean.search}" update="lvForm:reqTable"/>
+                </p:commandButton>
+                <p:commandButton value="الكل" styleClass="#{leaveBean.filterStatus=='ALL'?'p-button-primary':'p-button-text p-button-plain'}">
+                    <f:setPropertyActionListener target="#{leaveBean.filterStatus}" value="ALL"/>
+                    <p:ajax listener="#{leaveBean.search}" update="lvForm:reqTable"/>
+                </p:commandButton>
+            </div>
+        </div>
+
+        <!-- جدول الطلبات -->
+        <div class="joud-card" style="margin-bottom:14px">
+            <div class="joud-card-header">
+                <span class="joud-card-title">
+                    <i class="pi pi-list" style="margin-left:8px;color:#2E75B6"/>
+                    طلبات الإجازة
+                </span>
+            </div>
+
+            <p:dataTable id="reqTable" value="#{leaveBean.requests}" var="r"
+                         styleClass="report-table" rows="15" paginator="true"
+                         emptyMessage="لا توجد طلبات مطابقة">
+
+                <p:column headerText="الموظف">
+                    <h:outputText value="#{r.employeeName}"/>
+                </p:column>
+                <p:column headerText="النوع" style="width:110px">
+                    <h:outputText value="#{r.leaveTypeName}"/>
+                </p:column>
+                <p:column headerText="من" style="width:100px">
+                    <h:outputText value="#{r.dateFrom}"><f:convertDateTime pattern="dd/MM/yyyy"/></h:outputText>
+                </p:column>
+                <p:column headerText="إلى" style="width:100px">
+                    <h:outputText value="#{r.dateTo}"><f:convertDateTime pattern="dd/MM/yyyy"/></h:outputText>
+                </p:column>
+                <p:column headerText="الأيام" style="width:70px;text-align:center">
+                    <h:outputText value="#{r.days}"/>
+                </p:column>
+                <p:column headerText="الحالة" style="width:90px;text-align:center">
+                    <span class="leave-badge leave-#{r.status.toString()}">#{r.statusLabel}</span>
+                </p:column>
+                <p:column headerText="إجراء" style="width:120px;text-align:center">
+                    <p:commandButton icon="pi pi-check" title="اعتماد"
+                        styleClass="p-button-success p-button-text p-button-sm"
+                        rendered="#{r.pending}"
+                        action="#{leaveBean.approve(r)}"
+                        update="lvForm:reqTable lvForm:msgs"
+                        onclick="return confirm('اعتماد طلب الإجازة؟')"/>
+                    <p:commandButton icon="pi pi-times" title="رفض"
+                        styleClass="p-button-danger p-button-text p-button-sm"
+                        rendered="#{r.pending}"
+                        action="#{leaveBean.reject(r)}"
+                        update="lvForm:reqTable lvForm:msgs"
+                        onclick="return confirm('رفض طلب الإجازة؟')"/>
+                    <p:commandButton icon="pi pi-ban" title="إلغاء"
+                        styleClass="p-button-secondary p-button-text p-button-sm"
+                        rendered="#{r.canCancel() and !r.pending}"
+                        action="#{leaveBean.cancel(r)}"
+                        update="lvForm:reqTable lvForm:msgs"
+                        onclick="return confirm('إلغاء الإجازة المعتمدة؟')"/>
+                </p:column>
+
+            </p:dataTable>
+        </div>
+
+        <!-- رصيد الإجازات -->
+        <div class="joud-card">
+            <div class="joud-card-header">
+                <span class="joud-card-title">
+                    <i class="pi pi-wallet" style="margin-left:8px;color:#0F6E56"/>
+                    رصيد الإجازات السنوي
+                </span>
+                <p:commandButton icon="pi pi-refresh" styleClass="p-button-text p-button-sm"
+                    action="#{leaveBean.loadBalanceSummary}" update="lvForm:balanceTable"/>
+            </div>
+
+            <p:dataTable id="balanceTable" value="#{leaveBean.balanceSummary}" var="b"
+                         styleClass="report-table" rows="20" paginator="true"
+                         emptyMessage="اضغط زر التحديث لعرض الأرصدة">
+
+                <p:column headerText="الموظف">
+                    <h:outputText value="#{b[0]}"/>
+                </p:column>
+                <p:column headerText="نوع الإجازة" style="width:130px">
+                    <h:outputText value="#{b[1]}"/>
+                </p:column>
+                <p:column headerText="الرصيد السنوي" style="width:110px;text-align:center">
+                    <h:outputText value="#{b[2]}"/>
+                </p:column>
+                <p:column headerText="المستخدم" style="width:100px;text-align:center;color:#e67e22">
+                    <h:outputText value="#{b[3]}"/>
+                </p:column>
+                <p:column headerText="المتبقي" style="width:100px;text-align:center;font-weight:700;color:#0F6E56">
+                    <h:outputText value="#{b[2] - b[3]}"/>
+                </p:column>
+
+            </p:dataTable>
+        </div>
+
+    </div>
+</div>
+
+</h:form>
+</ui:define>
+</ui:composition>
+</html>

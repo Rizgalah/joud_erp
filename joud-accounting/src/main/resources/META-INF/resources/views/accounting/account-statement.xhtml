@@ -1,0 +1,308 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="jakarta.faces.html"
+      xmlns:f="jakarta.faces.core"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:ui="jakarta.faces.facelets"
+      lang="ar" dir="rtl">
+
+<ui:composition template="/WEB-INF/template.xhtml">
+<ui:define name="pageTitle">كشف الحساب</ui:define>
+
+<ui:define name="extraStyles">
+    <h:outputStylesheet library="css" name="accounting.css"/>
+</ui:define>
+
+<ui:define name="content">
+<h:form id="stmtForm">
+<p:growl id="msgs" life="4000" showDetail="true"/>
+
+<!-- ══════════════════════════════════════════════
+     فلاتر البحث
+══════════════════════════════════════════════ -->
+<div class="joud-card" style="margin-bottom:16px">
+    <div class="joud-card-header">
+        <span class="joud-card-title">
+            <i class="pi pi-search" style="margin-left:8px;color:#2E75B6"/>
+            بحث كشف الحساب
+        </span>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));
+                gap:14px;align-items:flex-end">
+
+        <!-- الفرع -->
+        <div>
+            <label style="font-size:12px;color:#666;display:block;margin-bottom:5px">
+                <i class="pi pi-building" style="margin-left:4px"/> الفرع
+            </label>
+            <p:selectOneMenu value="#{stmtBean.agentId}" style="width:100%">
+                <f:selectItem itemLabel="— اختر الفرع —" itemValue="#{null}"/>
+                <f:selectItems value="#{stmtBean.agents}"
+                               var="a" itemValue="#{a[0]}" itemLabel="#{a[1]}"/>
+            </p:selectOneMenu>
+        </div>
+
+        <!-- الحساب -->
+        <div style="grid-column:span 2">
+            <label style="font-size:12px;color:#666;display:block;margin-bottom:5px">
+                <i class="pi pi-book" style="margin-left:4px"/> الحساب
+            </label>
+            <p:selectOneMenu value="#{stmtBean.accountType}" style="width:100%"
+                             filter="true" filterMatchMode="contains">
+                <f:selectItem itemLabel="— اختر الحساب —" itemValue="#{null}"/>
+                <f:selectItems value="#{stmtBean.accounts}"
+                               var="a" itemValue="#{a[0]}"
+                               itemLabel="#{a[0]} — #{a[1]}"/>
+            </p:selectOneMenu>
+        </div>
+
+        <!-- من تاريخ -->
+        <div>
+            <label style="font-size:12px;color:#666;display:block;margin-bottom:5px">
+                <i class="pi pi-calendar" style="margin-left:4px"/> من تاريخ
+            </label>
+            <p:datePicker value="#{stmtBean.dateFrom}" pattern="dd/MM/yyyy"
+                          style="width:100%" showIcon="true"/>
+        </div>
+
+        <!-- إلى تاريخ -->
+        <div>
+            <label style="font-size:12px;color:#666;display:block;margin-bottom:5px">
+                <i class="pi pi-calendar" style="margin-left:4px"/> إلى تاريخ
+            </label>
+            <p:datePicker value="#{stmtBean.dateTo}" pattern="dd/MM/yyyy"
+                          style="width:100%" showIcon="true"/>
+        </div>
+
+        <!-- العملة -->
+        <div>
+            <label style="font-size:12px;color:#666;display:block;margin-bottom:5px">
+                <i class="pi pi-dollar" style="margin-left:4px"/> العملة
+            </label>
+            <p:selectOneMenu value="#{stmtBean.currencyId}" style="width:100%">
+                <f:selectItem itemLabel="الكل" itemValue="#{null}"/>
+                <f:selectItems value="#{stmtBean.currencies}"
+                               var="c" itemValue="#{c[0]}"
+                               itemLabel="#{c[2]} — #{c[1]}"/>
+            </p:selectOneMenu>
+        </div>
+
+        <!-- تصفية DR/CR -->
+        <div>
+            <label style="font-size:12px;color:#666;display:block;margin-bottom:5px">
+                <i class="pi pi-filter" style="margin-left:4px"/> نوع الحركة
+            </label>
+            <p:selectOneMenu value="#{stmtBean.filterDrCr}" style="width:100%">
+                <f:selectItem itemLabel="الكل"  itemValue="#{null}"/>
+                <f:selectItem itemLabel="مدين"  itemValue="DR"/>
+                <f:selectItem itemLabel="دائن"  itemValue="CR"/>
+            </p:selectOneMenu>
+        </div>
+
+        <!-- أزرار -->
+        <div style="display:flex;gap:8px">
+            <p:commandButton value="عرض الكشف" icon="pi pi-search"
+                action="#{stmtBean.search}"
+                update="stmtForm" ajax="true"
+                style="flex:1"/>
+            <p:commandButton icon="pi pi-refresh" title="تصفية"
+                styleClass="p-button-outlined p-button-secondary"
+                action="#{stmtBean.reset}"
+                update="stmtForm" ajax="true"
+                style="width:40px"/>
+        </div>
+
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     نتائج الكشف
+══════════════════════════════════════════════ -->
+<ui:fragment rendered="#{stmtBean.searched}">
+
+    <!-- بطاقات الأرصدة -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px">
+
+        <div class="joud-card" style="border-right:4px solid #2E75B6;padding:14px">
+            <div style="font-size:11px;color:#888;margin-bottom:4px">رصيد الافتتاح</div>
+            <div style="font-size:18px;font-weight:800;color:#1B3A6B;direction:ltr">
+                <h:outputText value="#{stmtBean.openingBalance}">
+                    <f:convertNumber pattern="#,##0.00"/>
+                </h:outputText>
+            </div>
+            <div style="font-size:12px;margin-top:4px;
+                color:#{stmtBean.openingDrCr=='D'?'#1a5276':'#1e8449'}">
+                #{stmtBean.openingDrCr=='D'?'مدين':'دائن'}
+            </div>
+        </div>
+
+        <div class="joud-card" style="border-right:4px solid #1a5276;padding:14px">
+            <div style="font-size:11px;color:#888;margin-bottom:4px">إجمالي المدين</div>
+            <div style="font-size:18px;font-weight:800;color:#1a5276;direction:ltr">
+                <h:outputText value="#{stmtBean.totalDebit}">
+                    <f:convertNumber pattern="#,##0.00"/>
+                </h:outputText>
+            </div>
+            <div style="font-size:12px;color:#888;margin-top:4px">DR</div>
+        </div>
+
+        <div class="joud-card" style="border-right:4px solid #1e8449;padding:14px">
+            <div style="font-size:11px;color:#888;margin-bottom:4px">إجمالي الدائن</div>
+            <div style="font-size:18px;font-weight:800;color:#1e8449;direction:ltr">
+                <h:outputText value="#{stmtBean.totalCredit}">
+                    <f:convertNumber pattern="#,##0.00"/>
+                </h:outputText>
+            </div>
+            <div style="font-size:12px;color:#888;margin-top:4px">CR</div>
+        </div>
+
+        <div class="joud-card" style="border-right:4px solid #0F6E56;padding:14px">
+            <div style="font-size:11px;color:#888;margin-bottom:4px">رصيد الإغلاق</div>
+            <div style="font-size:18px;font-weight:800;direction:ltr;
+                color:#{stmtBean.closingDrCr=='D'?'#1a5276':'#1e8449'}">
+                <h:outputText value="#{stmtBean.closingBalance}">
+                    <f:convertNumber pattern="#,##0.00"/>
+                </h:outputText>
+            </div>
+            <div style="font-size:12px;margin-top:4px;
+                color:#{stmtBean.closingDrCr=='D'?'#1a5276':'#1e8449'}">
+                #{stmtBean.closingDrCr=='D'?'مدين':'دائن'}
+            </div>
+        </div>
+
+    </div>
+
+    <!-- جدول الكشف -->
+    <div class="joud-card">
+        <div class="joud-card-header">
+            <span class="joud-card-title">
+                <i class="pi pi-book" style="margin-left:8px;color:#2E75B6"/>
+                كشف حساب: #{stmtBean.accountName}
+                (#{stmtBean.accountType})
+            </span>
+            <div style="display:flex;gap:8px">
+                <p:commandButton value="PDF" icon="pi pi-file-pdf"
+                    styleClass="p-button-danger p-button-outlined p-button-sm"
+                    action="#{stmtBean.exportPdf}" ajax="false"/>
+                <p:commandButton value="Excel" icon="pi pi-file-excel"
+                    styleClass="p-button-success p-button-outlined p-button-sm"
+                    action="#{stmtBean.exportExcel}" ajax="false"/>
+            </div>
+        </div>
+
+        <p:dataTable value="#{stmtBean.statementLines}" var="line"
+                     styleClass="report-table"
+                     rows="30" paginator="true"
+                     paginatorPosition="bottom"
+                     emptyMessage="لا توجد حركات خلال الفترة المختارة">
+
+            <!-- التاريخ -->
+            <p:column headerText="التاريخ" style="width:110px;white-space:nowrap">
+                <h:outputText value="#{line.date()}">
+                    <f:convertDateTime pattern="dd/MM/yyyy"/>
+                </h:outputText>
+            </p:column>
+
+            <!-- رقم المرجع -->
+            <p:column headerText="المرجع" style="width:130px;font-weight:600;color:#2E75B6">
+                <h:outputText value="#{line.reference()}"/>
+            </p:column>
+
+            <!-- نوع الحركة -->
+            <p:column headerText="النوع" style="width:80px;text-align:center">
+                <span style="font-size:11px;background:#f0f4f8;padding:2px 8px;
+                             border-radius:10px;color:#555">
+                    <h:outputText value="#{line.type() != null ? line.type() : '—'}"/>
+                </span>
+            </p:column>
+
+            <!-- البيان -->
+            <p:column headerText="البيان">
+                <h:outputText value="#{line.narration() != null ? line.narration() : '—'}"/>
+            </p:column>
+
+            <!-- مدين -->
+            <p:column headerText="مدين" style="width:130px;direction:ltr;text-align:left">
+                <span class="amt-dr">
+                    <h:outputText rendered="#{line.debit() != null}" value="#{line.debit()}">
+                        <f:convertNumber pattern="#,##0.00"/>
+                    </h:outputText>
+                    <h:outputText rendered="#{line.debit() == null}" value="—"
+                                  style="color:#ccc"/>
+                </span>
+            </p:column>
+
+            <!-- دائن -->
+            <p:column headerText="دائن" style="width:130px;direction:ltr;text-align:left">
+                <span class="amt-cr">
+                    <h:outputText rendered="#{line.credit() != null}" value="#{line.credit()}">
+                        <f:convertNumber pattern="#,##0.00"/>
+                    </h:outputText>
+                    <h:outputText rendered="#{line.credit() == null}" value="—"
+                                  style="color:#ccc"/>
+                </span>
+            </p:column>
+
+            <!-- الرصيد التراكمي -->
+            <p:column headerText="الرصيد" style="width:150px;direction:ltr;text-align:left">
+                <span style="font-weight:700;
+                    color:#{line.balDrCr()=='D'?'#1a5276':'#1e8449'}">
+                    <h:outputText value="#{line.balance()}">
+                        <f:convertNumber pattern="#,##0.00"/>
+                    </h:outputText>
+                    <small style="font-size:10px;margin-right:4px">
+                        #{line.balDrCr()=='D'?'م':'د'}
+                    </small>
+                </span>
+            </p:column>
+
+            <!-- صف الإجماليات -->
+            <p:columnGroup type="footer">
+                <p:row>
+                    <p:column footerText="الإجمالي" colspan="4"
+                              style="text-align:right;font-weight:700"/>
+                    <p:column style="direction:ltr;text-align:left;
+                                     color:#1a5276;font-weight:800">
+                        <h:outputText value="#{stmtBean.totalDebit}">
+                            <f:convertNumber pattern="#,##0.00"/>
+                        </h:outputText>
+                    </p:column>
+                    <p:column style="direction:ltr;text-align:left;
+                                     color:#1e8449;font-weight:800">
+                        <h:outputText value="#{stmtBean.totalCredit}">
+                            <f:convertNumber pattern="#,##0.00"/>
+                        </h:outputText>
+                    </p:column>
+                    <p:column style="direction:ltr;text-align:left;font-weight:800;
+                        color:#{stmtBean.closingDrCr=='D'?'#1a5276':'#1e8449'}">
+                        <h:outputText value="#{stmtBean.closingBalance}">
+                            <f:convertNumber pattern="#,##0.00"/>
+                        </h:outputText>
+                        <small style="font-size:10px;margin-right:4px">
+                            #{stmtBean.closingDrCr=='D'?'م':'د'}
+                        </small>
+                    </p:column>
+                </p:row>
+            </p:columnGroup>
+
+        </p:dataTable>
+    </div>
+
+</ui:fragment>
+
+<!-- رسالة ترحيبية قبل البحث -->
+<ui:fragment rendered="#{!stmtBean.searched}">
+    <div class="joud-card" style="text-align:center;padding:60px">
+        <i class="pi pi-book" style="font-size:48px;color:#d0d9e8;display:block;margin-bottom:16px"/>
+        <p style="color:#aaa;font-size:14px">
+            اختر الحساب والفترة ثم اضغط «عرض الكشف»
+        </p>
+    </div>
+</ui:fragment>
+
+</h:form>
+</ui:define>
+</ui:composition>
+</html>

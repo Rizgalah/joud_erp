@@ -1,0 +1,224 @@
+﻿-- ============================================================
+-- Joud ERP — joud-inventory Plugin Schema (PostgreSQL Version)
+-- ============================================================
+-- الجداول الموجودة مسبقاً (erp_database_schema_fixed.sql):
+--   warehouses, categories, units, products
+-- الجداول الموجودة من joud-trade:
+--   STOCK_MOVEMENTS
+-- التحسينات المضافة:
+--   ALTER TABLE products   — حقول إضافية
+--   ALTER TABLE warehouses — حقول إضافية
+-- الجداول الجديدة:
+--   STOCK_COUNT_MAST  — رأس جلسة الجرد
+--   STOCK_COUNT_LINE  — أسطر الجرد
+--   PRODUCT_BUNDLE    — مجموعات الأصناف (Bundle)
+--   PRODUCT_BUNDLE_ITEM — محتويات المجموعة
+--   REORDER_ALERT     — تنبيهات إعادة الطلب
+-- ============================================================
+
+-- ============================================================
+-- 1. تحسين جدول products
+-- ============================================================
+ALTER TABLE products ADD (
+  -- الباركود
+  prod_c_barcode     VARCHAR(100),
+  -- صورة الصنف
+  prod_c_image_path  VARCHAR(500),
+  -- الوصف التفصيلي
+  prod_c_description TEXT,
+  -- هل يُتتبع المخزون؟
+  prod_c_track_stock VARCHAR(1)    DEFAULT 'Y',
+  -- هل صنف خدمة (لا يحتاج مخزون)؟
+  prod_c_is_service  VARCHAR(1)    DEFAULT 'N',
+  -- الحد الأدنى للطلب (MOQ)
+  prod_f_moq         NUMERIC(23,5) DEFAULT 1,
+  -- وزن الصنف (للشحن)
+  prod_f_weight      NUMERIC(23,5) DEFAULT 0,
+  -- تاريخ انتهاء الصلاحية
+  prod_d_expiry      DATE,
+  -- وحدة القياس الثانية (مثلاً علبة / قطعة)
+  unit2_i_id         BIGINT        REFERENCES units(unit_i_id),
+  prod_f_conv_factor NUMERIC(23,5) DEFAULT 1, -- عامل التحويل بين الوحدتين
+  -- سعر التكلفة الحالي (FIFO / Average)
+  prod_f_avg_cost    NUMERIC(23,5) DEFAULT 0,
+  -- حالة الصنف: A=نشط, D=متوقف, O=منتهي
+  prod_c_status      VARCHAR(1)    DEFAULT 'A'
+);
+
+CREATE INDEX idx_prod_barcode ON products(prod_c_barcode);
+CREATE INDEX idx_prod_status  ON products(prod_c_status, categ_i_id);
+
+-- ============================================================
+-- 2. تحسين جدول warehouses
+-- ============================================================
+ALTER TABLE warehouses ADD (
+  ware_c_type        VARCHAR(20)   DEFAULT 'main', -- main | transit | return
+  ware_c_location    VARCHAR(500),
+  ware_c_phone       VARCHAR(50),
+  ware_c_notes       VARCHAR(500),
+  ware_d_created     TIMESTAMP     DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ============================================================
+-- 3. STOCK_COUNT_MAST — رأس جلسة الجرد
+-- ============================================================
+CREATE TABLE STOCK_COUNT_MAST
+(
+  COUNT_I_ID    BIGINT         PRIMARY KEY,
+  AGENT_I_ID    BIGINT         NOT NULL REFERENCES AGENT_MAST(AGENT_I_ID),
+  WARE_I_ID     BIGINT         REFERENCES warehouses(ware_i_id),
+  -- وصف الجرد
+  COUNT_C_DESC  VARCHAR(200)   NOT NULL,
+  COUNT_D_DATE  TIMESTAMP      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  -- الحالة: D=مسودة, I=جارٍ, C=مكتمل, P=معتمد
+  COUNT_C_STS   VARCHAR(1)     DEFAULT 'D',
+  -- نطاق الجرد: A=كل الأصناف, C=فئة, S=صنف محدد
+  COUNT_C_SCOPE VARCHAR(1)     DEFAULT 'A',
+  CATEG_I_ID    BIGINT         REFERENCES categories(categ_i_id),
+  -- الفرق الإجمالي في القيمة
+  COUNT_F_DIFF_VAL NUMERIC(23,5) DEFAULT 0,
+  COUNT_I_ITEMS    INT           DEFAULT 0, -- عدد الأصناف
+  APPROVED_BY   BIGINT         REFERENCES users(user_i_id),
+  APPROVED_AT   TIMESTAMP,
+  CREATED_BY    BIGINT         REFERENCES users(user_i_id),
+  CREATED_AT    TIMESTAMP      DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ============================================================
+-- 4. STOCK_COUNT_LINE — أسطر الجرد
+-- ============================================================
+CREATE TABLE STOCK_COUNT_LINE
+(
+  LINE_I_ID     BIGINT         PRIMARY KEY,
+  COUNT_I_ID    BIGINT         NOT NULL REFERENCES STOCK_COUNT_MAST(COUNT_I_ID) ON DELETE CASCADE,
+  PROD_I_ID     BIGINT         NOT NULL REFERENCES products(prod_i_id),
+  WARE_I_ID     BIGINT         REFERENCES warehouses(ware_i_id),
+  -- الكمية النظامية (من قاعدة البيانات)
+  LINE_F_SYS_QTY   NUMERIC(23,5) DEFAULT 0,
+  -- الكمية الفعلية (المُعدَّة يدوياً)
+  LINE_F_ACTUAL_QTY NUMERIC(23,5) DEFAULT 0,
+  -- الفرق = الفعلي - النظامي
+  LINE_F_DIFF_QTY  NUMERIC(23,5) DEFAULT 0,
+  -- تكلفة الوحدة (للحساب قيمة الفرق)
+  LINE_F_UNIT_COST NUMERIC(23,5) DEFAULT 0,
+  LINE_F_DIFF_VAL  NUMERIC(23,5) DEFAULT 0,
+  LINE_C_NOTES  VARCHAR(250),
+  COUNTED_BY    BIGINT         REFERENCES users(user_i_id),
+  COUNTED_AT    TIMESTAMP
+);
+
+CREATE INDEX idx_scl_count ON STOCK_COUNT_LINE(COUNT_I_ID, PROD_I_ID);
+
+-- ============================================================
+-- 5. PRODUCT_BUNDLE — مجموعات الأصناف
+-- ============================================================
+CREATE TABLE PRODUCT_BUNDLE
+(
+  BUNDLE_I_ID   BIGINT         PRIMARY KEY,
+  AGENT_I_ID    BIGINT         NOT NULL REFERENCES AGENT_MAST(AGENT_I_ID),
+  PROD_I_ID     BIGINT         NOT NULL REFERENCES products(prod_i_id), -- الصنف الأم
+  BUNDLE_C_DESC VARCHAR(200),
+  BUNDLE_C_STS  VARCHAR(1)     DEFAULT 'A',
+  CREATED_AT    TIMESTAMP      DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE PRODUCT_BUNDLE_ITEM
+(
+  ITEM_I_ID     BIGINT         PRIMARY KEY,
+  BUNDLE_I_ID   BIGINT         NOT NULL REFERENCES PRODUCT_BUNDLE(BUNDLE_I_ID) ON DELETE CASCADE,
+  PROD_I_ID     BIGINT         NOT NULL REFERENCES products(prod_i_id),
+  ITEM_F_QTY    NUMERIC(23,5)  NOT NULL DEFAULT 1
+);
+
+-- ============================================================
+-- 6. REORDER_ALERT — تنبيهات إعادة الطلب
+-- ============================================================
+CREATE TABLE REORDER_ALERT
+(
+  ALERT_I_ID    BIGINT         PRIMARY KEY,
+  PROD_I_ID     BIGINT         NOT NULL REFERENCES products(prod_i_id),
+  WARE_I_ID     BIGINT         REFERENCES warehouses(ware_i_id),
+  AGENT_I_ID    BIGINT         NOT NULL REFERENCES AGENT_MAST(AGENT_I_ID),
+  -- الكمية الحالية عند إنشاء التنبيه
+  ALERT_F_QTY   NUMERIC(23,5)  DEFAULT 0,
+  -- الكمية الدنيا المضبوطة
+  ALERT_F_MIN   NUMERIC(23,5)  DEFAULT 0,
+  -- الحالة: N=جديد, R=مراجعة, O=تم الطلب, C=مغلق
+  ALERT_C_STS   VARCHAR(1)     DEFAULT 'N',
+  CREATED_AT    TIMESTAMP      DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ============================================================
+-- 7. Views تحليلية
+-- ============================================================
+
+-- مستوى المخزون الحالي لكل صنف في كل مستودع
+CREATE OR REPLACE VIEW V_STOCK_LEVEL AS
+SELECT
+  p.prod_i_id,
+  p.prod_c_code,
+  p.prod_c_name,
+  p.prod_c_status,
+  c.categ_c_name,
+  u.unit_c_name,
+  p.current_quantity   AS total_qty,
+  p.min_quantity       AS min_qty,
+  p.prod_f_avg_cost,
+  p.current_quantity * p.prod_f_avg_cost AS stock_value,
+  p.purchase_price,
+  p.sale_price,
+  p.WARE_I_ID          AS default_warehouse,
+  -- هل تحت الحد الأدنى؟
+  CASE WHEN p.current_quantity <= p.min_quantity
+       THEN 'Y' ELSE 'N' END AS below_min,
+  p.AGENT_I_ID
+FROM products p
+LEFT JOIN categories c ON p.categ_i_id = c.categ_i_id
+LEFT JOIN units       u ON p.unit_i_id  = u.unit_i_id
+WHERE p.prod_c_status = 'A';
+
+-- تقرير حركات المخزون مع اسم الصنف والمستودع
+CREATE OR REPLACE VIEW V_STOCK_MOVEMENTS_DETAIL AS
+SELECT
+  sm.MOVE_I_ID,
+  sm.AGENT_I_ID,
+  sm.MOVE_D_DATE,
+  sm.MOVE_C_TYPE,
+  p.prod_c_code,
+  p.prod_c_name,
+  w.ware_c_name,
+  sm.MOVE_I_QTY,
+  sm.MOVE_F_QTY_BEFORE,
+  sm.MOVE_F_QTY_AFTER,
+  sm.MOVE_F_UNIT_COST,
+  sm.MOVE_I_QTY * sm.MOVE_F_UNIT_COST AS MOVE_F_VALUE,
+  i.invoice_number,
+  sm.MOVE_C_NOTES
+FROM STOCK_MOVEMENTS sm
+JOIN products   p ON sm.PROD_I_ID = p.prod_i_id
+LEFT JOIN warehouses w ON sm.WARE_I_ID = w.ware_i_id
+LEFT JOIN invoices   i ON sm.INVOICE_I_ID = i.invoice_i_id;
+
+-- تقرير قيمة المخزون الإجمالية
+CREATE OR REPLACE VIEW V_STOCK_VALUE AS
+SELECT
+  p.AGENT_I_ID,
+  c.categ_c_name,
+  c.categ_i_id,
+  COUNT(*)                                       AS PROD_COUNT,
+  SUM(p.current_quantity)                        AS TOTAL_QTY,
+  SUM(p.current_quantity * p.prod_f_avg_cost)    AS TOTAL_VALUE,
+  SUM(p.current_quantity * p.purchase_price)     AS TOTAL_COST,
+  SUM(p.current_quantity * p.sale_price)         AS TOTAL_SALE_VALUE
+FROM products p
+LEFT JOIN categories c ON p.categ_i_id = c.categ_i_id
+WHERE p.prod_c_status = 'A'
+  AND p.prod_c_track_stock = 'Y'
+GROUP BY p.AGENT_I_ID, c.categ_i_id, c.categ_c_name;
+
+-- ============================================================
+-- END OF INVENTORY SCHEMA
+-- جداول جديدة: 5
+-- ALTER: products + warehouses
+-- Views: 3
+-- ============================================================

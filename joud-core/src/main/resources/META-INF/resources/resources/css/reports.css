@@ -1,0 +1,53 @@
+/* ═══════════════════════════════════════════════════
+   Joud ERP — Report Center Styles
+   ═══════════════════════════════════════════════════ */
+
+.rep-module-group {
+    padding: 8px 0;
+    border-bottom: 1px solid #f0f4f8;
+}
+.rep-module-group:last-child { border-bottom: none; }
+
+.rep-module-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 6px 16px 4px;
+}
+
+.rep-item {
+    display: flex;
+    align-items: center;
+    padding: 9px 16px;
+    font-size: 13px;
+    color: #1B3A6B;
+    text-decoration: none;
+    transition: all 0.15s;
+    cursor: pointer;
+}
+.rep-item:hover     { background: #f0f4f8; }
+.rep-item-active    { background: #e8f0fa; font-weight: 700; border-right: 3px solid #2E75B6; }
+
+.rep-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: #555;
+    margin-bottom: 5px;
+}
+
+.report-table .p-datatable-thead > tr > th {
+    background: #1B3A6B !important;
+    color: white !important;
+    font-size: 12.5px !important;
+    padding: 10px 14px !important;
+    text-align: right !important;
+}
+.report-table .p-datatable-tfoot > tr > td {
+    background: #e8f0fa !important;
+    font-weight: 800 !important;
+    color: #1B3A6B !important;
+    border-top: 2px solid #1B3A6B !important;
+}

@@ -1,0 +1,353 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:h="jakarta.faces.html" xmlns:f="jakarta.faces.core"
+    xmlns:p="http://primefaces.org/ui" xmlns:ui="jakarta.faces.facelets" lang="ar" dir="rtl">
+
+<ui:composition template="/WEB-INF/template.xhtml">
+    <ui:define name="pageTitle">لوحة التحكم</ui:define>
+
+    <ui:define name="extraStyles">
+        <h:outputStylesheet library="css" name="dashboard.css" />
+    </ui:define>
+
+    <ui:define name="content">
+
+        <!-- ══ شريط الترحيب ══ -->
+        <div class="dash-welcome">
+            <div>
+                <div class="dash-welcome-name">
+                    مرحباً، #{navbarBean.currentUsername} 👋
+                </div>
+                <div class="dash-welcome-date">
+                    #{navbarBean.currentDayName} — #{navbarBean.currentDate}
+                </div>
+            </div>
+            <div class="dash-welcome-stats">
+                <div class="dash-welcome-stat">
+                    <div class="dash-welcome-stat-val">#{dashBean.invoicesToday}</div>
+                    <div class="dash-welcome-stat-label">فواتير اليوم</div>
+                </div>
+                <div class="dash-welcome-stat">
+                    <div class="dash-welcome-stat-val">#{dashBean.totalEmployees}</div>
+                    <div class="dash-welcome-stat-label">الموظفون</div>
+                </div>
+                <div class="dash-welcome-stat">
+                    <div class="dash-welcome-stat-val">#{dashBean.openPeriods}</div>
+                    <div class="dash-welcome-stat-label">فترات مفتوحة</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══ بطاقات KPI ══ -->
+        <div class="kpi-grid">
+
+            <!-- مبيعات اليوم -->
+            <a href="#{request.contextPath}/views/trade/invoice-form.xhtml" class="kpi-card">
+                <div class="kpi-icon kpi-green"><i class="pi pi-arrow-up-right" /></div>
+                <div class="kpi-body">
+                    <div class="kpi-label">مبيعات اليوم</div>
+                    <div class="kpi-value" style="font-size:18px">
+                        <h:outputText value="#{dashBean.salesToday}">
+                            <f:convertNumber pattern="#,##0.00" />
+                        </h:outputText>
+                    </div>
+                    <div class="kpi-sub">
+                        <i class="pi pi-receipt" style="font-size:10px" />
+                        #{dashBean.invoicesToday} فاتورة اليوم
+                    </div>
+                </div>
+            </a>
+
+            <!-- مبيعات الشهر -->
+            <a href="#{request.contextPath}/views/trade/invoice-form.xhtml" class="kpi-card">
+                <div class="kpi-icon kpi-blue"><i class="pi pi-chart-line" /></div>
+                <div class="kpi-body">
+                    <div class="kpi-label">مبيعات الشهر</div>
+                    <div class="kpi-value" style="font-size:18px">
+                        <h:outputText value="#{dashBean.salesMonth}">
+                            <f:convertNumber pattern="#,##0.00" />
+                        </h:outputText>
+                    </div>
+                    <div class="kpi-sub #{dashBean.growthPositive?'kpi-growth-up':'kpi-growth-down'}">
+                        <i class="pi #{dashBean.growthPositive?'pi-arrow-up':'pi-arrow-down'}" style="font-size:10px" />
+                        #{dashBean.formatGrowth()} عن الشهر الماضي
+                    </div>
+                </div>
+            </a>
+
+            <!-- صافي الربح -->
+            <div class="kpi-card">
+                <div class="kpi-icon #{dashBean.profitPositive?'kpi-green':'kpi-red'}">
+                    <i class="pi #{dashBean.profitPositive?'pi-dollar':'pi-minus-circle'}" />
+                </div>
+                <div class="kpi-body">
+                    <div class="kpi-label">صافي الربح (الشهر)</div>
+                    <div class="kpi-value" style="font-size:18px;
+                color:#{dashBean.profitPositive?'#0F6E56':'#e74c3c'}">
+                        <h:outputText value="#{dashBean.netProfitMonth.abs()}">
+                            <f:convertNumber pattern="#,##0.00" />
+                        </h:outputText>
+                    </div>
+                    <div class="kpi-sub" style="color:#{dashBean.profitPositive?'#0F6E56':'#e74c3c'}">
+                        #{dashBean.profitPositive?'ربح':'خسارة'}
+                    </div>
+                </div>
+            </div>
+
+            <!-- فواتير آجلة -->
+            <a href="#{request.contextPath}/views/trade/payments.xhtml" class="kpi-card">
+                <div class="kpi-icon #{dashBean.unpaidInvoices>0?'kpi-orange':'kpi-green'}">
+                    <i class="pi pi-clock" />
+                </div>
+                <div class="kpi-body">
+                    <div class="kpi-label">فواتير غير مسددة</div>
+                    <div class="kpi-value" style="color:#{dashBean.unpaidInvoices>0?'#e67e22':'#0F6E56'}">
+                        #{dashBean.unpaidInvoices}
+                    </div>
+                    <div class="kpi-sub" style="color:#888">فاتورة تنتظر السداد</div>
+                </div>
+            </a>
+
+            <!-- قيمة المخزون -->
+            <a href="#{request.contextPath}/views/inventory/products.xhtml" class="kpi-card">
+                <div class="kpi-icon kpi-purple"><i class="pi pi-box" /></div>
+                <div class="kpi-body">
+                    <div class="kpi-label">قيمة المخزون</div>
+                    <div class="kpi-value" style="font-size:16px">
+                        <h:outputText value="#{dashBean.stockValue}">
+                            <f:convertNumber pattern="#,##0" />
+                        </h:outputText>
+                    </div>
+                    <div class="kpi-sub" style="color:#888">
+                        #{dashBean.totalProducts} صنف نشط
+                    </div>
+                </div>
+            </a>
+
+            <!-- أصناف تحت الحد -->
+            <a href="#{request.contextPath}/views/inventory/products.xhtml" class="kpi-card">
+                <div class="kpi-icon #{dashBean.belowMinCount>0?'kpi-red':'kpi-green'}">
+                    <i class="pi pi-exclamation-triangle" />
+                </div>
+                <div class="kpi-body">
+                    <div class="kpi-label">تحت الحد الأدنى</div>
+                    <div class="kpi-value" style="color:#{dashBean.belowMinCount>0?'#e74c3c':'#0F6E56'}">
+                        #{dashBean.belowMinCount}
+                    </div>
+                    <div class="kpi-sub" style="color:#888">
+                        #{dashBean.reorderAlerts} تنبيه إعادة طلب
+                    </div>
+                </div>
+            </a>
+
+            <!-- الموظفون -->
+            <a href="#{request.contextPath}/views/hr/employees.xhtml" class="kpi-card">
+                <div class="kpi-icon kpi-teal"><i class="pi pi-users" /></div>
+                <div class="kpi-body">
+                    <div class="kpi-label">الموظفون النشطون</div>
+                    <div class="kpi-value">#{dashBean.totalEmployees}</div>
+                    <div class="kpi-sub" style="color:#{dashBean.expiringDocs>0?'#e67e22':'#888'}">
+                        #{dashBean.expiringDocs > 0 ? dashBean.expiringDocs + ' وثيقة تنتهي قريباً' : 'جميع الوثائق
+                        سارية'}
+                    </div>
+                </div>
+            </a>
+
+            <!-- رواتب الشهر -->
+            <a href="#{request.contextPath}/views/hr/payroll.xhtml" class="kpi-card">
+                <div class="kpi-icon kpi-blue"><i class="pi pi-wallet" /></div>
+                <div class="kpi-body">
+                    <div class="kpi-label">رواتب الشهر</div>
+                    <div class="kpi-value" style="font-size:16px">
+                        <h:outputText value="#{dashBean.payrollMonth}">
+                            <f:convertNumber pattern="#,##0" />
+                        </h:outputText>
+                    </div>
+                    <div class="kpi-sub" style="color:#{dashBean.pendingLeaves>0?'#e67e22':'#888'}">
+                        #{dashBean.pendingLeaves > 0 ? dashBean.pendingLeaves + ' إجازة معلقة' : 'لا إجازات معلقة'}
+                    </div>
+                </div>
+            </a>
+
+        </div>
+
+        <!-- ══ الرسوم البيانية ══ -->
+        <div class="charts-grid">
+
+            <!-- مخطط المبيعات والمشتريات -->
+            <div class="chart-card">
+                <div class="chart-header">
+                    <span class="chart-title">
+                        <i class="pi pi-chart-bar" style="color:#2E75B6" />
+                        المبيعات والمشتريات — آخر 6 أشهر
+                    </span>
+                </div>
+                <div class="chart-body">
+                    <p:barChart model="#{chartHelper.salesChartModel}"
+                        rendered="#{chartHelper.salesChartModel != null}"
+                         style="width:100%;height:260px" />
+                </div>
+            </div>
+
+            <!-- مخطط توزيع المخزون -->
+            <div class="chart-card">
+                <div class="chart-header">
+                    <span class="chart-title">
+                        <i class="pi pi-chart-pie" style="color:#0F6E56" />
+                        قيمة المخزون حسب الفئة
+                    </span>
+                </div>
+                <div class="chart-body">
+                    <p:donutChart model="#{chartHelper.stockChartModel}" 
+                     rendered="#{chartHelper.stockChartModel != null}"
+                    style="width:100%;height:260px" />
+                </div>
+            </div>
+
+        </div>
+
+        <!-- ══ القسم السفلي ══ -->
+        <div class="bottom-grid">
+
+            <!-- التنبيهات -->
+            <div class="chart-card">
+                <div class="chart-header">
+                    <span class="chart-title">
+                        <i class="pi pi-bell" style="color:#e67e22" />
+                        التنبيهات
+                    </span>
+                    <span style="font-size:11px;color:#888">
+                        #{dashBean.alerts.size()} تنبيه
+                    </span>
+                </div>
+                <div class="chart-body">
+                    <ui:fragment rendered="#{empty dashBean.alerts}">
+                        <div style="text-align:center;padding:30px;color:#aaa;font-size:13px">
+                            <i class="pi pi-check-circle"
+                                style="font-size:32px;display:block;margin-bottom:8px;color:#0F6E56" />
+                            لا توجد تنبيهات
+                        </div>
+                    </ui:fragment>
+                    <div class="alert-list">
+                        <ui:repeat value="#{dashBean.alerts}" var="a">
+                            <a href="#{request.contextPath}#{a.link()}.xhtml" class="alert-item alert-#{a.level()}">
+                                <span class="alert-module">#{a.module()}</span>
+                                <span class="alert-msg">#{a.message()}</span>
+                                <i class="pi pi-angle-left" style="font-size:11px;color:#aaa" />
+                            </a>
+                        </ui:repeat>
+                    </div>
+                </div>
+            </div>
+
+            <!-- آخر الفواتير -->
+            <div class="chart-card">
+                <div class="chart-header">
+                    <span class="chart-title">
+                        <i class="pi pi-file-invoice" style="color:#2E75B6" />
+                        آخر الفواتير
+                    </span>
+                    <a href="#{request.contextPath}/views/trade/invoice-form.xhtml"
+                        style="font-size:11px;color:#2E75B6">عرض الكل</a>
+                </div>
+                <div class="chart-body" style="padding:0">
+                    <p:dataTable value="#{dashBean.recentInvoices}" var="inv" styleClass="dash-table"
+                        emptyMessage="لا توجد فواتير">
+                        <p:column headerText="الفاتورة" style="width:110px;font-weight:600;color:#2E75B6">
+                            <h:outputText value="#{inv[0]}" />
+                        </p:column>
+                        <p:column headerText="العميل">
+                            <h:outputText value="#{inv[1]}" />
+                        </p:column>
+                        <p:column headerText="المبلغ" style="width:100px;direction:ltr;text-align:left">
+                            <span style="font-weight:700;color:#1B3A6B">
+                                <h:outputText value="#{inv[2]}">
+                                    <f:convertNumber pattern="#,##0.00" />
+                                </h:outputText>
+                            </span>
+                        </p:column>
+                        <p:column headerText="الرصيد" style="width:90px;direction:ltr;text-align:left">
+                            <span style="color:#{inv[3]!=null and inv[3]>0?'#e74c3c':'#0F6E56'};font-weight:700">
+                                <h:outputText value="#{inv[3]}">
+                                    <f:convertNumber pattern="#,##0.00" />
+                                </h:outputText>
+                            </span>
+                        </p:column>
+                        <p:column headerText="الحالة" style="width:75px;text-align:center">
+                            <span class="d-badge d-badge-#{inv[4]}">
+                                #{inv[4]=='posted'?'مرحّلة':inv[4]=='draft'?'مسودة':'ملغاة'}
+                            </span>
+                        </p:column>
+                    </p:dataTable>
+                </div>
+            </div>
+
+            <!-- آخر حركات المخزون -->
+            <div class="chart-card">
+                <div class="chart-header">
+                    <span class="chart-title">
+                        <i class="pi pi-arrows-v" style="color:#0F6E56" />
+                        آخر حركات المخزون
+                    </span>
+                    <a href="#{request.contextPath}/views/inventory/stock-movements.xhtml"
+                        style="font-size:11px;color:#2E75B6">عرض الكل</a>
+                </div>
+                <div class="chart-body" style="padding:0">
+                    <p:dataTable value="#{dashBean.recentMovements}" var="mov" styleClass="dash-table"
+                        emptyMessage="لا توجد حركات">
+                        <p:column headerText="التاريخ" style="width:95px">
+                            <h:outputText value="#{mov[0]}">
+                                <f:convertDateTime pattern="dd/MM" />
+                            </h:outputText>
+                        </p:column>
+                        <p:column headerText="النوع" style="width:70px;text-align:center">
+                            <span class="d-badge d-badge-#{mov[1]}">
+                                #{mov[1]=='IN'?'وارد':mov[1]=='OUT'?'صادر':'تسوية'}
+                            </span>
+                        </p:column>
+                        <p:column headerText="الصنف">
+                            <h:outputText value="#{mov[2]}" />
+                        </p:column>
+                        <p:column headerText="الكمية" style="width:80px;direction:ltr;text-align:left">
+                            <span style="font-weight:700;
+                        color:#{mov[1]=='IN'?'#0F6E56':mov[1]=='OUT'?'#e74c3c':'#2E75B6'}">
+                                <h:outputText value="#{mov[3]}">
+                                    <f:convertNumber pattern="#,##0.###" />
+                                </h:outputText>
+                            </span>
+                        </p:column>
+                        <p:column headerText="الرصيد" style="width:80px;direction:ltr;text-align:left">
+                            <h:outputText value="#{mov[4]}">
+                                <f:convertNumber pattern="#,##0.##" />
+                            </h:outputText>
+                        </p:column>
+                    </p:dataTable>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- ══ قيود محاسبية معلقة ══ -->
+        <ui:fragment rendered="#{dashBean.pendingJVs > 0}">
+            <div style="background:#fff8e1;border:1px solid #ffc107;border-radius:10px;
+                padding:14px 20px;display:flex;align-items:center;gap:12px;margin-bottom:16px">
+                <i class="pi pi-exclamation-triangle" style="color:#f39c12;font-size:20px" />
+                <span style="font-size:13px;color:#856404">
+                    يوجد <strong>#{dashBean.pendingJVs}</strong> قيد يومي ينتظر الاعتماد
+                </span>
+                <a href="#{request.contextPath}/views/accounting/journal-entry.xhtml"
+                    style="margin-right:auto;font-size:12px;color:#2E75B6;font-weight:600">
+                    اعتماد القيود ←
+                </a>
+            </div>
+        </ui:fragment>
+
+        <script>
+            // تحديث لوحة التحكم كل 5 دقائق
+            setTimeout(function () { location.reload(); }, 300000);
+        </script>
+
+    </ui:define>
+</ui:composition>
+
+</html>

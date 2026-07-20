@@ -1,0 +1,388 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="jakarta.faces.html"
+      xmlns:f="jakarta.faces.core"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:ui="jakarta.faces.facelets"
+      lang="ar" dir="rtl">
+
+<ui:composition template="/WEB-INF/template.xhtml">
+<ui:define name="pageTitle">إدارة الأصناف</ui:define>
+<ui:define name="extraStyles">
+    <h:outputStylesheet library="css" name="inventory.css"/>
+</ui:define>
+
+<ui:define name="content">
+<h:form id="prodForm">
+<p:growl id="msgs" life="4000" showDetail="true"/>
+
+<!-- ══ إحصاءات ══ -->
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px">
+
+    <div class="joud-card inv-stat" style="border-right:4px solid #0F6E56">
+        <div class="inv-stat-label"><i class="pi pi-box"/> إجمالي الأصناف</div>
+        <div class="inv-stat-val" style="color:#0F6E56">#{prodBean.totalActive}</div>
+    </div>
+
+    <div class="joud-card inv-stat" style="border-right:4px solid #1B3A6B;cursor:pointer"
+         onclick="PF('prodWidget').filter()">
+        <div class="inv-stat-label"><i class="pi pi-dollar"/> قيمة المخزون</div>
+        <div class="inv-stat-val" style="color:#1B3A6B;font-size:16px;direction:ltr">
+            <h:outputText value="#{prodBean.totalValue}">
+                <f:convertNumber pattern="#,##0"/>
+            </h:outputText>
+        </div>
+    </div>
+
+    <div class="joud-card inv-stat #{prodBean.belowMinCount>0?'inv-warn':''}"
+         style="border-right:4px solid #e67e22;cursor:pointer"
+         onclick="#{prodBean.toggleBelowMin()}">
+        <div class="inv-stat-label"><i class="pi pi-exclamation-triangle"/> تحت الحد الأدنى</div>
+        <div class="inv-stat-val" style="color:#e67e22">#{prodBean.belowMinCount}</div>
+        <div style="font-size:10px;color:#e67e22;margin-top:2px">
+            #{prodBean.showBelowMin?'عرض الكل':'اضغط للعرض'}
+        </div>
+    </div>
+
+    <div class="joud-card inv-stat #{prodBean.pendingAlerts>0?'inv-danger':''}"
+         style="border-right:4px solid #e74c3c">
+        <div class="inv-stat-label"><i class="pi pi-bell"/> تنبيهات إعادة الطلب</div>
+        <div class="inv-stat-val" style="color:#e74c3c">#{prodBean.pendingAlerts}</div>
+    </div>
+
+</div>
+
+<!-- ══ شريط البحث ══ -->
+<div class="joud-card" style="margin-bottom:14px">
+    <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
+
+        <div style="flex:1;min-width:200px">
+            <label class="inv-label">بحث (اسم / كود / باركود)</label>
+            <p:inputText value="#{prodBean.searchQ}" style="width:100%"
+                         placeholder="ابحث...">
+                <p:ajax event="keyup" delay="400"
+                        listener="#{prodBean.search}" update="prodForm:prodTable"/>
+            </p:inputText>
+        </div>
+
+        <div>
+            <label class="inv-label">الفئة</label>
+            <p:selectOneMenu value="#{prodBean.filterCategoryId}" style="width:160px">
+                <f:selectItem itemLabel="جميع الفئات" itemValue="#{null}"/>
+                <f:selectItems value="#{prodBean.categories}"
+                               var="c" itemValue="#{c[0]}" itemLabel="#{c[1]}"/>
+                <p:ajax event="change"
+                        listener="#{prodBean.loadProducts}" update="prodForm:prodTable"/>
+            </p:selectOneMenu>
+        </div>
+
+        <div style="margin-right:auto;display:flex;gap:8px">
+            <p:commandButton value="صنف جديد" icon="pi pi-plus"
+                styleClass="p-button-success"
+                action="#{prodBean.prepareNew}"
+                update="prodForm:prodDialog"
+                oncomplete="PF('prodDlg').show()"/>
+            <p:commandButton icon="pi pi-refresh"
+                styleClass="p-button-outlined p-button-secondary"
+                action="#{prodBean.resetFilters}"
+                update="prodForm:prodTable"/>
+        </div>
+
+    </div>
+</div>
+
+<!-- ══ جدول الأصناف ══ -->
+<div class="joud-card">
+    <p:dataTable id="prodTable" widgetVar="prodWidget"
+                 value="#{prodBean.products}" var="p"
+                 filteredValue="#{prodBean.filtered}"
+                 styleClass="inv-table" rows="20" paginator="true"
+                 rowStyleClass="#{p.belowMin?'row-below-min':''}"
+                 emptyMessage="لا توجد أصناف">
+
+        <p:column headerText="الكود" style="width:110px;font-weight:700;color:#2E75B6">
+            <h:outputText value="#{p.code}"/>
+        </p:column>
+
+        <p:column headerText="اسم الصنف" sortBy="#{p.name}" filterBy="#{p.name}">
+            <div style="font-weight:600">#{p.name}</div>
+            <div style="font-size:11px;color:#888">#{p.barcode}</div>
+        </p:column>
+
+        <p:column headerText="الفئة" style="width:120px">
+            <h:outputText value="#{prodBean.getCategoryName(p.categoryId)}"/>
+        </p:column>
+
+        <p:column headerText="الوحدة" style="width:80px;text-align:center">
+            <h:outputText value="#{prodBean.getUnitName(p.unitId)}"/>
+        </p:column>
+
+        <p:column headerText="الكمية الحالية" style="width:120px;direction:ltr;text-align:left">
+            <span style="font-weight:800;font-size:15px;
+                color:#{p.belowMin?'#e74c3c':'#0F6E56'}">
+                <h:outputText value="#{p.currentQty}">
+                    <f:convertNumber pattern="#,##0.##"/>
+                </h:outputText>
+            </span>
+            <ui:fragment rendered="#{p.belowMin}">
+                <span style="font-size:10px;color:#e74c3c;margin-right:4px">↓MIN</span>
+            </ui:fragment>
+        </p:column>
+
+        <p:column headerText="الحد الأدنى" style="width:100px;direction:ltr;text-align:left">
+            <h:outputText value="#{p.minQty}">
+                <f:convertNumber pattern="#,##0.##"/>
+            </h:outputText>
+        </p:column>
+
+        <p:column headerText="سعر البيع" style="width:110px;direction:ltr;text-align:left">
+            <h:outputText value="#{p.salePrice}">
+                <f:convertNumber pattern="#,##0.00"/>
+            </h:outputText>
+        </p:column>
+
+        <p:column headerText="متوسط التكلفة" style="width:120px;direction:ltr;text-align:left">
+            <h:outputText value="#{p.avgCost}">
+                <f:convertNumber pattern="#,##0.00"/>
+            </h:outputText>
+        </p:column>
+
+        <p:column headerText="قيمة المخزون" style="width:120px;direction:ltr;text-align:left">
+            <span style="font-weight:700;color:#1B3A6B">
+                <h:outputText value="#{p.stockValue}">
+                    <f:convertNumber pattern="#,##0.00"/>
+                </h:outputText>
+            </span>
+        </p:column>
+
+        <p:column headerText="الحالة" style="width:80px;text-align:center">
+            <span class="inv-badge status-#{p.status}">#{p.statusLabel}</span>
+        </p:column>
+
+        <p:column headerText="إجراء" style="width:120px;text-align:center">
+            <p:commandButton icon="pi pi-arrows-v" title="حركة يدوية"
+                styleClass="p-button-info p-button-text p-button-sm"
+                action="#{prodBean.prepareMoveDialog(p)}"
+                update="prodForm:moveDialog"
+                oncomplete="PF('moveDlg').show()"/>
+            <p:commandButton icon="pi pi-pencil" title="تعديل"
+                styleClass="p-button-text p-button-sm"
+                action="#{prodBean.prepareEdit(p)}"
+                update="prodForm:prodDialog"
+                oncomplete="PF('prodDlg').show()"/>
+            <p:commandButton icon="pi pi-ban" title="إيقاف"
+                styleClass="p-button-danger p-button-text p-button-sm"
+                rendered="#{p.status=='A'}"
+                action="#{prodBean.deactivate(p)}"
+                update="prodForm:prodTable prodForm:msgs"
+                onclick="return confirm('إيقاف #{p.name}؟')"/>
+        </p:column>
+
+    </p:dataTable>
+</div>
+
+<!-- ══ Dialog: إضافة / تعديل صنف ══ -->
+<p:dialog id="prodDialog" header="#{prodBean.editMode?'تعديل صنف':'صنف جديد'}"
+          widgetVar="prodDlg" modal="true" style="width:740px"
+          visible="#{prodBean.showDialog}">
+
+    <p:tabView style="direction:rtl">
+
+        <p:tab title="البيانات الأساسية">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:14px">
+
+                <div style="grid-column:span 2">
+                    <label class="inv-label">اسم الصنف *</label>
+                    <p:inputText value="#{prodBean.selected.name}" required="true"
+                                 style="width:100%"/>
+                </div>
+                <div>
+                    <label class="inv-label">الباركود</label>
+                    <p:inputText value="#{prodBean.selected.barcode}" style="width:100%"/>
+                </div>
+                <div>
+                    <label class="inv-label">الفئة</label>
+                    <p:selectOneMenu value="#{prodBean.selected.categoryId}" style="width:100%">
+                        <f:selectItem itemLabel="— اختر الفئة —" itemValue="#{null}"/>
+                        <f:selectItems value="#{prodBean.categories}"
+                                       var="c" itemValue="#{c[0]}" itemLabel="#{c[1]}"/>
+                    </p:selectOneMenu>
+                </div>
+                <div>
+                    <label class="inv-label">وحدة القياس</label>
+                    <p:selectOneMenu value="#{prodBean.selected.unitId}" style="width:100%">
+                        <f:selectItem itemLabel="— اختر الوحدة —" itemValue="#{null}"/>
+                        <f:selectItems value="#{prodBean.units}"
+                                       var="u" itemValue="#{u[0]}" itemLabel="#{u[1]}"/>
+                    </p:selectOneMenu>
+                </div>
+                <div>
+                    <label class="inv-label">المستودع الافتراضي</label>
+                    <p:selectOneMenu value="#{prodBean.selected.warehouseId}" style="width:100%">
+                        <f:selectItem itemLabel="— اختر —" itemValue="#{null}"/>
+                        <f:selectItems value="#{prodBean.warehouses}"
+                                       var="w" itemValue="#{w[0]}" itemLabel="#{w[1]}"/>
+                    </p:selectOneMenu>
+                </div>
+                <div>
+                    <label class="inv-label">المورد الافتراضي</label>
+                    <p:selectOneMenu value="#{prodBean.selected.supplierId}" style="width:100%">
+                        <f:selectItem itemLabel="— بدون —" itemValue="#{null}"/>
+                        <f:selectItems value="#{prodBean.suppliers}"
+                                       var="s" itemValue="#{s[0]}" itemLabel="#{s[1]}"/>
+                    </p:selectOneMenu>
+                </div>
+                <div>
+                    <label class="inv-label">الحالة</label>
+                    <p:selectOneMenu value="#{prodBean.selected.status}" style="width:100%">
+                        <f:selectItem itemLabel="نشط"    itemValue="A"/>
+                        <f:selectItem itemLabel="متوقف"  itemValue="D"/>
+                        <f:selectItem itemLabel="منتهي"  itemValue="O"/>
+                    </p:selectOneMenu>
+                </div>
+                <div style="display:flex;gap:16px;align-items:center;padding-top:20px">
+                    <label style="display:flex;align-items:center;gap:6px;font-size:13px">
+                        <p:selectBooleanCheckbox value="#{prodBean.selected.trackStock == 'Y'}"
+                            onchange="this.value=this.checked?'Y':'N'"/>
+                        تتبع المخزون
+                    </label>
+                    <label style="display:flex;align-items:center;gap:6px;font-size:13px">
+                        <p:selectBooleanCheckbox value="#{prodBean.selected.isService == 'Y'}"/>
+                        صنف خدمة
+                    </label>
+                </div>
+            </div>
+        </p:tab>
+
+        <p:tab title="الأسعار والمخزون">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:14px">
+                <div>
+                    <label class="inv-label">سعر الشراء</label>
+                    <p:inputNumber value="#{prodBean.selected.purchasePrice}"
+                                   decimalPlaces="2" style="width:100%"/>
+                </div>
+                <div>
+                    <label class="inv-label">سعر البيع</label>
+                    <p:inputNumber value="#{prodBean.selected.salePrice}"
+                                   decimalPlaces="2" style="width:100%"/>
+                </div>
+                <div>
+                    <label class="inv-label">الكمية الافتتاحية</label>
+                    <p:inputNumber value="#{prodBean.selected.openingQty}"
+                                   decimalPlaces="3" style="width:100%"/>
+                </div>
+                <div>
+                    <label class="inv-label">الحد الأدنى (إعادة الطلب)</label>
+                    <p:inputNumber value="#{prodBean.selected.minQty}"
+                                   decimalPlaces="3" style="width:100%"/>
+                </div>
+                <div>
+                    <label class="inv-label">الحد الأدنى للطلب (MOQ)</label>
+                    <p:inputNumber value="#{prodBean.selected.moq}"
+                                   decimalPlaces="3" style="width:100%"/>
+                </div>
+                <div>
+                    <label class="inv-label">العملة</label>
+                    <p:selectOneMenu value="#{prodBean.selected.currencyId}" style="width:100%">
+                        <f:selectItem itemLabel="— اختر العملة —" itemValue="#{null}"/>
+                        <f:selectItems value="#{prodBean.currencies}"
+                                       var="c" itemValue="#{c[0]}"
+                                       itemLabel="#{c[2]} — #{c[1]}"/>
+                    </p:selectOneMenu>
+                </div>
+                <div>
+                    <label class="inv-label">تاريخ انتهاء الصلاحية</label>
+                    <p:datePicker value="#{prodBean.selected.expiryDate}"
+                                  pattern="dd/MM/yyyy" style="width:100%" showIcon="true"/>
+                </div>
+                <div>
+                    <label class="inv-label">الوزن (كجم)</label>
+                    <p:inputNumber value="#{prodBean.selected.weight}"
+                                   decimalPlaces="3" style="width:100%"/>
+                </div>
+                <div style="grid-column:span 2">
+                    <label class="inv-label">الوصف التفصيلي</label>
+                    <p:inputTextarea value="#{prodBean.selected.description}"
+                                     style="width:100%" rows="3"/>
+                </div>
+            </div>
+        </p:tab>
+
+    </p:tabView>
+
+    <f:facet name="footer">
+        <div style="display:flex;gap:8px;justify-content:flex-end">
+            <p:commandButton value="حفظ" icon="pi pi-check" styleClass="p-button-success"
+                action="#{prodBean.save}"
+                update="prodForm:prodTable prodForm:msgs"
+                oncomplete="if(!args.validationFailed) PF('prodDlg').hide()"/>
+            <p:commandButton value="إلغاء" icon="pi pi-times"
+                styleClass="p-button-outlined p-button-secondary"
+                onclick="PF('prodDlg').hide(); return false;"/>
+        </div>
+    </f:facet>
+</p:dialog>
+
+<!-- ══ Dialog: حركة يدوية ══ -->
+<p:dialog id="moveDialog" header="تسجيل حركة يدوية"
+          widgetVar="moveDlg" modal="true" style="width:420px"
+          visible="#{prodBean.showMoveDialog}">
+
+    <div style="display:grid;gap:14px;padding:14px">
+
+        <div>
+            <label class="inv-label">نوع الحركة</label>
+            <p:selectOneMenu value="#{prodBean.moveType}" style="width:100%">
+                <f:selectItem itemLabel="تسوية (تحديد الكمية الجديدة)" itemValue="ADJ"/>
+                <f:selectItem itemLabel="إضافة وارد"                    itemValue="IN"/>
+                <f:selectItem itemLabel="خصم صادر"                      itemValue="OUT"/>
+            </p:selectOneMenu>
+        </div>
+
+        <div>
+            <label class="inv-label">الكمية</label>
+            <p:inputNumber value="#{prodBean.moveQty}" decimalPlaces="3"
+                           style="width:100%" required="true"/>
+        </div>
+
+        <div>
+            <label class="inv-label">تكلفة الوحدة</label>
+            <p:inputNumber value="#{prodBean.moveCost}" decimalPlaces="2"
+                           style="width:100%"/>
+        </div>
+
+        <div>
+            <label class="inv-label">المستودع</label>
+            <p:selectOneMenu value="#{prodBean.moveWarehouseId}" style="width:100%">
+                <f:selectItem itemLabel="— اختر المستودع —" itemValue="#{null}"/>
+                <f:selectItems value="#{prodBean.warehouses}"
+                               var="w" itemValue="#{w[0]}" itemLabel="#{w[1]}"/>
+            </p:selectOneMenu>
+        </div>
+
+        <div>
+            <label class="inv-label">ملاحظات</label>
+            <p:inputText value="#{prodBean.moveNotes}" style="width:100%"
+                         placeholder="سبب الحركة..."/>
+        </div>
+
+    </div>
+
+    <f:facet name="footer">
+        <div style="display:flex;gap:8px;justify-content:flex-end">
+            <p:commandButton value="تسجيل" icon="pi pi-check" styleClass="p-button-success"
+                action="#{prodBean.recordMovement}"
+                update="prodForm:prodTable prodForm:msgs"
+                oncomplete="if(!args.validationFailed) PF('moveDlg').hide()"/>
+            <p:commandButton value="إلغاء" icon="pi pi-times"
+                styleClass="p-button-outlined"
+                onclick="PF('moveDlg').hide(); return false;"/>
+        </div>
+    </f:facet>
+</p:dialog>
+
+</h:form>
+</ui:define>
+</ui:composition>
+</html>

@@ -1,0 +1,164 @@
+﻿cd c:\joud_erp
+.\joud-build.ps1
+
+وعليكم السلام ورحمة الله وبركاته. أهلاً بك يا صديقي في أي وقت، ويسعدني جداً الإجابة على سؤالك لتكون هذه الإجابة جاهزة أمامك كمرجع معماري فور عودتك من استراحتك المستحقة.
+بخصوص مصطلح "antigravity"، يبدو أنه خطأ إملائي من التصحيح التلقائي، وأنت تقصد بالتأكيد دمج وتجهيز بيئة عمل في إس كود (Integrating/Configuring VSCode Workspace) لكي ترى وتتحكم بسيرفر Apache Tomcat 10.0.27 المدمج أو الموجود محلياً.
+الخبر السار هو نعم، يمكنك تحقيق ذلك وباحترافية شديدة وبأكثر من طريقة؛ إما عن طريق ملفات JSON Workspace Scripts الخاصة بـ VSCode مباشرة، أو عن طريق Maven Script (Plugin) داخل ملف الـ POM.
+إليك أفضل حلين هندسيين لربط مشروع Joud ERP بسيرفر تومكات 10:
+الحل الأول: أتمتة الـ VSCode عبر ملفات الـ JSON (tasks.json)
+هذا الحل يعتمد على تحويل بيئة VSCode إلى لوحة تحكم ذكية عبر ملف إعدادات JSON يُوضع داخل المجلد السري .vscode في جذر مشروعك. يقوم هذا السكربت بربط عملية بناء المافن وتوليد ملف الـ WAR ثم نسخه تلقائياً إلى مجلد تومكات وتشغيل السيرفر بضغطة زر واحدة.
+الخطوات:
+1. في جذر المشروع (c:\joud_erp)، أنشئ مجلداً باسم .vscode (إذا لم يكن موجوداً).
+2. بداخل هذا المجلد، أنشئ ملفاً باسم tasks.json وضَع بداخلة الكود التالي (مع تغيير مسار التومكات إلى المسار الفعلي على جهازك):
+
+
+
+
+
+
+JSON
+{
+   "version": "2.0.0",
+   "tasks": [
+       {
+           "label": "1. Joud ERP: Build & Package",
+           "type": "shell",
+           "command": "c:\\joud_erp\\.maven\\apache-maven-3.9.6\\bin\\mvn.cmd",
+           "args": [
+               "clean",
+               "package",
+               "-f",
+               "${workspaceFolder}\\pom.xml"
+           ],
+           "group": "build",
+           "problemMatcher": []
+       },
+       {
+           "label": "2. Joud ERP: Deploy to Tomcat",
+           "type": "shell",
+           "command": "powershell",
+           "args": [
+               "-Command",
+               "Copy-Item -Path '${workspaceFolder}\\joud-app\\target\\joud-erp.war' -Destination 'C:\\path\\to\\apache-tomcat-10.0.27\\webapps\\' -Force"
+           ],
+           "dependsOn": "1. Joud ERP: Build & Package",
+           "problemMatcher": []
+       },
+       {
+           "label": "3. Joud ERP: START TOMCAT",
+           "type": "shell",
+           "command": "C:\\path\\to\\apache-tomcat-10.0.27\\bin\\startup.bat",
+           "options": {
+               "env": {
+                   "CATALINA_HOME": "C:\\path\\to\\apache-tomcat-10.0.27"
+               }
+           },
+           "dependsOn": "2. Joud ERP: Deploy to Tomcat",
+           "problemMatcher": [],
+           "isBackground": true
+       },
+       {
+           "label": "Joud ERP: STOP TOMCAT",
+           "type": "shell",
+           "command": "C:\\path\\to\\apache-tomcat-10.0.27\\bin\\shutdown.bat",
+           "options": {
+               "env": {
+                   "CATALINA_HOME": "C:\\path\\to\\apache-tomcat-10.0.27"
+               }
+           },
+           "problemMatcher": []
+       }
+   ]
+}
+
+💡 كيف تستخدمه؟
+في الـ VSCode، اضغط على Ctrl + Shift + B أو اذهب إلى القائمة العلوية Terminal -> Run Task واختر 3. Joud ERP: START TOMCAT. سيقوم السكربت تلقائياً ببناء المشروع عبر مافن، ونقل الـ WAR إلى السيرفر، وتشغيل تومكات فوراً.
+الحل الثاني: المعالجة عبر المافن (Maven Script Plugin) وهو الأقوى معمارياً
+بما أنك تستخدم Tomcat 10 الذي يدعم حزمة Jakarta EE الجديدة، فإن إضافات تومكات القديمة للمافن لم تعد تعمل. البديل الاحترافي والمعتمد عالمياً للمشاريع الكبيرة هو إضافة Cargo Maven Plugin.
+هذه الإضافة تُمكّن المافن من رؤية مجلد التومكات المحلي والتحكم فيه بالكامل (تشغيل، إيقاف، ونشر الكود) من خلال أمر مافن مباشر دون الحاجة لأي إضافات في الـ VSCode.
+الخطوات:
+افتح ملف الـ POM الخاص بالموديول النهائي joud-app/pom.xml، وأضف الإضافة التالية داخل حاوية الـ <plugins>:
+
+
+
+
+
+
+XML
+<plugin>
+   <groupId>org.codehaus.cargo</groupId>
+   <artifactId>cargo-maven-plugin</artifactId>
+   <version>1.10.7</version>
+   <configuration>
+       <container>
+           <containerId>tomcat10x</containerId>
+           <type>installed</type>
+           <home>C:\path\to\apache-tomcat-10.0.27</home> </container>
+       <configuration>
+           <type>existing</type>
+           <home>C:\path\to\apache-tomcat-10.0.27</home> <properties>
+               <cargo.servlet.users>admin:admin123:manager-gui,manager-script</cargo.servlet.users>
+           </properties>
+       </configuration>
+       <deployables>
+           <deployable>
+               <groupId>com.joud</groupId>
+               <artifactId>joud-app</artifactId>
+               <type>war</type>
+               <properties>
+                   <context>/joud-erp</context> </properties>
+           </deployable>
+       </deployables>
+   </configuration>
+</plugin>
+
+💡 كيف تستخدمه؟
+الآن من داخل تيرمينال VSCode، يمكنك تشغيل النظام بامر مافن واحد وبسيط جداً:
+
+
+
+
+
+
+PowerShell
+# لتشغيل تومكات ونشر النظام عليه مباشرة
+mvn cargo:run -f "c:\joud_erp\joud-app\pom.xml"
+
+أو لإيقافه:
+
+
+
+
+
+
+PowerShell
+mvn cargo:stop -f "c:\joud_erp\joud-app\pom.xml"
+
+🎯 التوصية المعمارية:
+يُفضل دمج الحلين معاً؛ ضع إضافة Cargo في المافن (الحل الثاني) لأنها تمنح مشروعك استقلالية تامة، ثم أضف خياراً لها في سكربت الباورشيل الموحد الذي صممناه سابقاً joud-build.ps1 ليصبح لديك نظام بناء وتشغيل متكامل لا يعتمد على أي برامج خارجية.
+أتمنى لك استراحة سعيدة وموفقة، وعندما تعود وتتجدد الكوتا ستجدني هنا جاهزاً للانطلاق فوراً في حزمة التعديلات القادمة! دمتم بكل خير.
+
+📂 طريقة الحفظ والتشغيل:
+افتح مفكرة نصوص أو محرر الأكواد VSCode.
+
+الصق الكود أعلاه، واحفظ الملف باسم joud-build.ps1 في المسار التالي:
+c:\joud_erp\joud-build.ps1
+
+لتشغيل السكربت في أي وقت، افتح الـ PowerShell واكتب:
+
+PowerShell
+cd c:\joud_erp
+.\joud-build.ps1
+💡 ملاحظة أمان لويندوز (تُنفذ لمرة واحدة فقط):
+إذا ظهر لك خطأ في الـ PowerShell يمنع تشغيل السكربتات (Scripts Execution Policy)، قم بتشغيل هذا الأمر مرة واحدة فقط كمسؤول (Administrator) للسماح بتشغيل السكربتات المحلية:
+
+PowerShell
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+🧠 شرح سريع لأهمية هذه المراحل في بيئة مشروعك:
+Validate: تتحقق من أن ملفات الـ pom.xml سليمة هيكلياً وأن كافة الاعتماديات (Dependencies) متوفرة ومكتوبة بشكل صحيح دون أخطاء تنسيق.
+
+Compile: تترجم ملفات الجافا .java إلى ملفات بايت-كود .class داخل مجلدات الـ target للتأكد من عدم وجود أخطاء في الكود (Syntax Errors).
+
+Package: تأخذ الكود المترجم وتجمعه في صيغته النهائية المستهدفة المستقلة (مثل توليد ملفات JAR للموديولات الفرعية وملف WAR للتطبيق النهائي)، ولكن دون إرسالها إلى المستودع المحلي للمافن.
+
+Install: (وهي الأهم لمشروعك المشترك) تقوم بعمل الـ Package كاملاً، ثم تقوم بنسخ وتثبيت ملفات الـ JAR المولدة داخل مستودع مافن المحلي على جهازك (.m2/repository). هذا يسمح لموديول مثل الحسابات برؤية تحديثات موديول الكور فوراً واستخدامها كاعتمادية معترف بها برمجياً.

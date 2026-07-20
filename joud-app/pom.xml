@@ -1,0 +1,277 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                             https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- ═══════════════════════════════════════════════════════════
+         Joud ERP — التطبيق النهائي القابل للنشر
+         يجمع جميع الوحدات في ملف WAR واحد لـ Apache Tomcat
+    ═══════════════════════════════════════════════════════════ -->
+    <parent>
+        <groupId>com.joud</groupId>
+        <artifactId>joud-erp-parent</artifactId>
+        <version>1.0.0</version>
+    </parent>
+    <artifactId>joud-app</artifactId>
+    <packaging>war</packaging>
+
+    <name>Joud ERP Application</name>
+    <description>التطبيق النهائي — يجمع جميع وحدات Joud ERP في WAR واحد قابل للنشر</description>
+
+    <properties>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+        <!-- إصدارات المكتبات — يجب أن تطابق joud-core -->
+        <jakarta.version>10.0.0</jakarta.version>
+        <hibernate.version>6.4.4.Final</hibernate.version>
+        <postgresql.version>42.7.3</postgresql.version>
+        <jasper.version>6.21.0</jasper.version>
+        <poi.version>5.2.5</poi.version>
+        <bcrypt.version>0.10.2</bcrypt.version>
+        <primefaces.version>13.0.0</primefaces.version>
+    </properties>
+
+    <dependencies>
+
+        <!-- ═══════════════════════════════════════════════════════
+             وحدات Joud ERP الستة (scope=compile — تُضمَّن في WAR)
+        ═══════════════════════════════════════════════════════ -->
+      <dependency>
+    <groupId>com.joud</groupId>
+    <artifactId>joud-core</artifactId>
+    <version>1.0.0</version>
+</dependency>
+        <dependency>
+            <groupId>com.joud</groupId>
+            <artifactId>joud-accounting</artifactId>
+            <version>1.0.0</version>
+            <type>jar</type>
+        </dependency>
+        <dependency>
+            <groupId>com.joud</groupId>
+            <artifactId>joud-hr</artifactId>
+            <version>1.0.0</version>
+            <type>jar</type>
+        </dependency>
+        <dependency>
+            <groupId>com.joud</groupId>
+            <artifactId>joud-trade</artifactId>
+            <version>1.0.0</version>
+            <type>jar</type>
+        </dependency>
+        <dependency>
+            <groupId>com.joud</groupId>
+            <artifactId>joud-inventory</artifactId>
+            <version>1.0.0</version>
+            <type>jar</type>
+        </dependency>
+        <dependency>
+            <groupId>com.joud</groupId>
+            <artifactId>joud-dashboard</artifactId>
+            <version>1.0.0</version>
+            <type>jar</type>
+        </dependency>
+
+        <!-- ═══════════════════════════════════════════════════════
+             Jakarta EE 10 — provided (يوفرها Tomcat عبر TomEE أو
+             يُضاف يدوياً في lib/ إن استُخدم Tomcat العادي)
+        ═══════════════════════════════════════════════════════ -->
+       <dependency>
+    <groupId>org.glassfish</groupId>
+    <artifactId>jakarta.faces</artifactId>
+    <version>4.0.5</version>
+</dependency>
+
+        <!-- ═══════════════════════════════════════════════════════
+             Hibernate ORM — مضمَّن في WAR
+             (Tomcat لا يوفر JPA provider افتراضياً)
+        ═══════════════════════════════════════════════════════ -->
+        <dependency>
+            <groupId>org.hibernate.orm</groupId>
+            <artifactId>hibernate-core</artifactId>
+            <version>${hibernate.version}</version>
+        </dependency>
+        <!-- Hibernate يحتاج Jakarta Persistence API داخلياً -->
+        <dependency>
+            <groupId>jakarta.persistence</groupId>
+            <artifactId>jakarta.persistence-api</artifactId>
+            <version>3.1.0</version>
+        </dependency>
+
+        <!-- ═══════════════════════════════════════════════════════
+             PostgreSQL JDBC Driver
+        ═══════════════════════════════════════════════════════ -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>${postgresql.version}</version>
+        </dependency>
+
+        <!-- ═══════════════════════════════════════════════════════
+             PrimeFaces 13 — Jakarta edition
+        ═══════════════════════════════════════════════════════ -->
+        <dependency>
+            <groupId>org.primefaces</groupId>
+            <artifactId>primefaces</artifactId>
+            <version>${primefaces.version}</version>
+            <classifier>jakarta</classifier>
+        </dependency>
+
+        <!-- ═══════════════════════════════════════════════════════
+             JasperReports — محرّك التقارير
+        ═══════════════════════════════════════════════════════ -->
+        <dependency>
+            <groupId>net.sf.jasperreports</groupId>
+            <artifactId>jasperreports</artifactId>
+            <version>${jasper.version}</version>
+            <exclusions>
+                <!-- استبعاد commons-logging القديمة لتجنب التعارض -->
+                <exclusion>
+                    <groupId>commons-logging</groupId>
+                    <artifactId>commons-logging</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <!-- ═══════════════════════════════════════════════════════
+             Apache POI — تصدير Excel
+        ═══════════════════════════════════════════════════════ -->
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi-ooxml</artifactId>
+            <version>${poi.version}</version>
+        </dependency>
+
+        <!-- ═══════════════════════════════════════════════════════
+             BCrypt — تشفير كلمات المرور
+        ═══════════════════════════════════════════════════════ -->
+        <dependency>
+            <groupId>at.favre.lib</groupId>
+            <artifactId>bcrypt</artifactId>
+            <version>${bcrypt.version}</version>
+        </dependency>
+
+        <!-- ═══════════════════════════════════════════════════════
+             SLF4J + Logback — التسجيل
+        ═══════════════════════════════════════════════════════ -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>2.0.12</version>
+        </dependency>
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+            <version>1.5.3</version>
+        </dependency>
+
+        <!-- SLF4J bridge لـ JUL (java.util.logging) المستخدم في الكود -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>jul-to-slf4j</artifactId>
+            <version>2.0.12</version>
+        </dependency>
+
+        <!-- CDI Implementation (Weld) — Tomcat لا يوفر CDI افتراضياً -->
+        <dependency>
+            <groupId>org.jboss.weld.servlet</groupId>
+            <artifactId>weld-servlet-shaded</artifactId>
+            <version>5.1.2.Final</version>
+        </dependency>
+        <!-- أضف هذا داخل pom.xml الخاص بـ joud-app -->
+
+
+   <!-- ════════════════════════════════════════════════════
+     Jersey REST API Dependencies (Jakarta EE 10 Compatible)
+     ════════════════════════════════════════════════════ -->
+<dependency>
+    <groupId>org.glassfish.jersey.containers</groupId>
+    <artifactId>jersey-container-servlet</artifactId>
+    
+</dependency>
+
+<dependency>
+    <groupId>org.glassfish.jersey.inject</groupId>
+    <artifactId>jersey-hk2</artifactId>
+
+</dependency>
+
+<!-- اختيارياً: لدعم معالجة وإرجاع بيانات JSON/Text بسلاسة -->
+<dependency>
+    <groupId>org.glassfish.jersey.media</groupId>
+    <artifactId>jersey-media-json-jackson</artifactId>
+  
+</dependency>
+
+ <dependency>
+    <groupId>org.glassfish.jersey.ext.cdi</groupId>
+    <artifactId>jersey-cdi1x</artifactId> 
+  </dependency>  
+    </dependencies>
+
+    <build>
+     <!-- اسم الملف النهائي لدعم النشر المتوازي في Tomcat (Parallel Deployment) -->
+        <finalName>joud##${project.version}</finalName>
+      <!-- <finalName>joud-erp</finalName> -->
+        <!-- اسم ملف WAR الناتج: joud-erp.war → Tomcat يعرضه على /joud-erp -->
+
+        <plugins>
+
+            <!-- ─── Compiler: Java 21 ─── -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.13.0</version>
+                <configuration>
+                    <release>21</release>
+                    <encoding>UTF-8</encoding>
+                </configuration>
+            </plugin>
+
+            <!-- ─── WAR Plugin: يجمع كل شيء في WAR واحد ─── -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-war-plugin</artifactId>
+                <version>3.4.0</version>
+                <configuration>
+                    <warName>joud-erp</warName>
+                    <failOnMissingWebXml>false</failOnMissingWebXml>
+                    <!-- دمج موارد webapp من كل الوحدات تلقائياً عبر Maven Overlay -->
+                   
+                </configuration>
+            </plugin>
+            <plugin>
+    <groupId>org.codehaus.cargo</groupId>
+    <artifactId>cargo-maven-plugin</artifactId>
+    <version>1.10.7</version>
+    <configuration>
+        <container>
+            <containerId>tomcat10x</containerId>
+            <type>installed</type>
+            <home>C:\joud_erp\apache-tomcat-10.0.27</home> </container>
+        <configuration>
+            <type>existing</type>
+            <home>C:\joud_erp\apache-tomcat-10.0.27</home> <properties>
+                <cargo.servlet.users>admin:admin123:manager-gui,manager-script</cargo.servlet.users>
+            </properties>
+        </configuration>
+        <deployables>
+            <deployable>
+                <groupId>com.joud</groupId>
+                <artifactId>joud-app</artifactId>
+                <type>war</type>
+                <properties>
+                    <context>/joud-erp</context> </properties>
+            </deployable>
+        </deployables>
+    </configuration>
+</plugin>
+
+        </plugins>
+    </build>
+
+</project>

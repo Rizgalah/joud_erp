@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="jakarta.faces.html"
+      xmlns:f="jakarta.faces.core"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:ui="jakarta.faces.facelets"
+      lang="ar" dir="rtl">
+
+<ui:composition template="/WEB-INF/template.xhtml">
+<ui:define name="pageTitle">الحضور والغياب</ui:define>
+
+<ui:define name="extraStyles">
+    <h:outputStylesheet library="css" name="hr.css"/>
+</ui:define>
+
+<ui:define name="content">
+<h:form id="attForm">
+<p:growl id="msgs" life="4000" showDetail="true"/>
+
+<!-- ══════════════════════════════════════════════
+     شريط التحكم بالتاريخ والإحصاءات
+══════════════════════════════════════════════ -->
+<div class="joud-card" style="margin-bottom:16px">
+    <div style="display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap">
+
+        <div>
+            <label class="field-label">تاريخ اليوم</label>
+            <p:datePicker value="#{attBean.selectedDate}" pattern="dd/MM/yyyy"
+                          style="width:160px" showIcon="true">
+                <p:ajax event="dateSelect" listener="#{attBean.onDateChange}"
+                        update="attForm:dayTable attForm:statBar"/>
+            </p:datePicker>
+        </div>
+
+        <div id="statBar" style="display:flex;gap:14px;margin-right:auto">
+            <div class="att-stat" style="background:#e1f5ee;color:#0F6E56">
+                <i class="pi pi-check-circle"/> حاضر: <strong>#{attBean.presentCount}</strong>
+            </div>
+            <div class="att-stat" style="background:#fdecea;color:#e74c3c">
+                <i class="pi pi-times-circle"/> غائب: <strong>#{attBean.absentCount}</strong>
+            </div>
+            <div class="att-stat" style="background:#fff3cd;color:#856404">
+                <i class="pi pi-calendar-minus"/> إجازة: <strong>#{attBean.leaveCount}</strong>
+            </div>
+        </div>
+
+        <p:commandButton value="تحديد الكل حاضر" icon="pi pi-check"
+            styleClass="p-button-outlined p-button-success"
+            action="#{attBean.markAllPresent}"
+            update="attForm:dayTable attForm:statBar"/>
+
+        <p:commandButton value="حفظ السجل" icon="pi pi-save"
+            styleClass="p-button-success"
+            action="#{attBean.saveDay}"
+            update="attForm" ajax="true"/>
+
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     جدول حضور اليوم — كل الموظفين دفعة واحدة
+══════════════════════════════════════════════ -->
+<div class="joud-card" style="margin-bottom:16px">
+    <div class="joud-card-header">
+        <span class="joud-card-title">
+            <i class="pi pi-calendar-plus" style="margin-left:8px;color:#2E75B6"/>
+            سجل حضور يوم
+            <h:outputText value="#{attBean.selectedDate}">
+                <f:convertDateTime pattern="dd/MM/yyyy"/>
+            </h:outputText>
+        </span>
+    </div>
+
+    <p:dataTable id="dayTable" value="#{attBean.dayRows}" var="row"
+                 styleClass="report-table" rows="30" paginator="true"
+                 emptyMessage="لا يوجد موظفون نشطون">
+
+        <p:column headerText="الرقم" style="width:90px;font-weight:700;color:#2E75B6">
+            <h:outputText value="#{row.employeeCode()}"/>
+        </p:column>
+
+        <p:column headerText="اسم الموظف">
+            <h:outputText value="#{row.employeeName()}"/>
+        </p:column>
+
+        <p:column headerText="الحالة" style="width:140px">
+            <p:selectOneMenu value="#{row.attendance().status}" style="width:100%">
+                <f:selectItem itemLabel="حاضر"     itemValue="P"/>
+                <f:selectItem itemLabel="غائب"     itemValue="A"/>
+                <f:selectItem itemLabel="إجازة"    itemValue="L"/>
+                <f:selectItem itemLabel="عطلة"     itemValue="H"/>
+                <f:selectItem itemLabel="مأمورية"  itemValue="E"/>
+                <p:ajax event="change" listener="#{attBean.onStatusChange}"
+                        update="attForm:statBar"/>
+            </p:selectOneMenu>
+        </p:column>
+
+        <p:column headerText="وقت الحضور" style="width:130px;text-align:center">
+            <h:outputText value="#{row.attendance().checkIn}" rendered="#{row.attendance().checkIn != null}">
+                <f:convertDateTime pattern="HH:mm" type="both"/>
+            </h:outputText>
+            <p:commandButton value="تسجيل" icon="pi pi-sign-in"
+                rendered="#{row.attendance().checkIn == null}"
+                styleClass="p-button-text p-button-sm p-button-success"
+                action="#{attBean.quickCheckIn(row)}"
+                update="@parent"/>
+        </p:column>
+
+        <p:column headerText="وقت الانصراف" style="width:130px;text-align:center">
+            <h:outputText value="#{row.attendance().checkOut}" rendered="#{row.attendance().checkOut != null}">
+                <f:convertDateTime pattern="HH:mm" type="both"/>
+            </h:outputText>
+            <p:commandButton value="تسجيل" icon="pi pi-sign-out"
+                rendered="#{row.attendance().checkOut == null and row.attendance().checkIn != null}"
+                styleClass="p-button-text p-button-sm p-button-danger"
+                action="#{attBean.quickCheckOut(row)}"
+                update="@parent"/>
+        </p:column>
+
+        <p:column headerText="ساعات العمل" style="width:100px;direction:ltr;text-align:left">
+            <h:outputText value="#{row.attendance().hours}">
+                <f:convertNumber pattern="#,##0.00"/>
+            </h:outputText>
+        </p:column>
+
+        <p:column headerText="إضافي" style="width:90px;direction:ltr;text-align:left">
+            <span style="color:#e67e22">
+                <h:outputText value="#{row.attendance().otHours}">
+                    <f:convertNumber pattern="#,##0.00"/>
+                </h:outputText>
+            </span>
+        </p:column>
+
+        <p:column headerText="ملاحظات">
+            <p:inputText value="#{row.attendance().notes}" style="width:100%;font-size:12px"/>
+        </p:column>
+
+    </p:dataTable>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     الملخص الشهري
+══════════════════════════════════════════════ -->
+<div class="joud-card">
+    <div class="joud-card-header">
+        <span class="joud-card-title">
+            <i class="pi pi-chart-bar" style="margin-left:8px;color:#2E75B6"/>
+            الملخص الشهري
+        </span>
+        <div style="display:flex;gap:10px;align-items:center">
+            <p:selectOneMenu value="#{attBean.summaryMonth}" style="width:120px">
+                <f:selectItem itemLabel="يناير"   itemValue="1"/>
+                <f:selectItem itemLabel="فبراير"  itemValue="2"/>
+                <f:selectItem itemLabel="مارس"    itemValue="3"/>
+                <f:selectItem itemLabel="أبريل"   itemValue="4"/>
+                <f:selectItem itemLabel="مايو"    itemValue="5"/>
+                <f:selectItem itemLabel="يونيو"   itemValue="6"/>
+                <f:selectItem itemLabel="يوليو"   itemValue="7"/>
+                <f:selectItem itemLabel="أغسطس"   itemValue="8"/>
+                <f:selectItem itemLabel="سبتمبر"  itemValue="9"/>
+                <f:selectItem itemLabel="أكتوبر"  itemValue="10"/>
+                <f:selectItem itemLabel="نوفمبر"  itemValue="11"/>
+                <f:selectItem itemLabel="ديسمبر"  itemValue="12"/>
+            </p:selectOneMenu>
+            <p:selectOneMenu value="#{attBean.summaryYear}" style="width:90px">
+                <f:selectItem itemLabel="2025" itemValue="2025"/>
+                <f:selectItem itemLabel="2026" itemValue="2026"/>
+            </p:selectOneMenu>
+            <p:commandButton icon="pi pi-search" styleClass="p-button-sm"
+                action="#{attBean.loadMonthlySummary}" update="attForm:summaryTable"/>
+        </div>
+    </div>
+
+    <p:dataTable id="summaryTable" value="#{attBean.monthlySummary}" var="r"
+                 styleClass="report-table" rows="20" paginator="true"
+                 emptyMessage="لا توجد بيانات للشهر المختار">
+
+        <p:column headerText="اسم الموظف">
+            <h:outputText value="#{r[0]}"/>
+        </p:column>
+        <p:column headerText="أيام الحضور" style="width:110px;text-align:center;color:#0F6E56">
+            <h:outputText value="#{r[1]}"/>
+        </p:column>
+        <p:column headerText="أيام الغياب" style="width:110px;text-align:center;color:#e74c3c">
+            <h:outputText value="#{r[2]}"/>
+        </p:column>
+        <p:column headerText="أيام الإجازة" style="width:110px;text-align:center;color:#856404">
+            <h:outputText value="#{r[3]}"/>
+        </p:column>
+        <p:column headerText="إجمالي الساعات" style="width:120px;direction:ltr;text-align:left">
+            <h:outputText value="#{r[4]}"><f:convertNumber pattern="#,##0.00"/></h:outputText>
+        </p:column>
+        <p:column headerText="ساعات إضافية" style="width:120px;direction:ltr;text-align:left">
+            <span style="color:#e67e22">
+                <h:outputText value="#{r[5]}"><f:convertNumber pattern="#,##0.00"/></h:outputText>
+            </span>
+        </p:column>
+
+    </p:dataTable>
+</div>
+
+</h:form>
+</ui:define>
+</ui:composition>
+</html>

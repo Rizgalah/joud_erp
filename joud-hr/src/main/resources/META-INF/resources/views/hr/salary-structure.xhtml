@@ -1,0 +1,241 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="jakarta.faces.html"
+      xmlns:f="jakarta.faces.core"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:ui="jakarta.faces.facelets"
+      lang="ar" dir="rtl">
+
+<ui:composition template="/WEB-INF/template.xhtml">
+<ui:define name="pageTitle">هيكل الرواتب</ui:define>
+<ui:define name="extraStyles">
+    <h:outputStylesheet library="css" name="hr.css"/>
+</ui:define>
+
+<ui:define name="content">
+<h:form id="strForm">
+<p:growl id="msgs" life="4000" showDetail="true"/>
+
+<!-- ══ اختيار الموظف ══ -->
+<div class="joud-card" style="margin-bottom:16px">
+    <div style="display:flex;gap:14px;align-items:flex-end">
+        <div style="flex:1">
+            <label class="field-label">اختر الموظف</label>
+            <p:selectOneMenu value="#{structBean.employeeId}" style="width:100%"
+                             filter="true" filterMatchMode="contains">
+                <f:selectItem itemLabel="— اختر موظفاً لعرض هيكل راتبه —" itemValue="#{null}"/>
+                <f:selectItems value="#{structBean.employees}"
+                               var="e" itemValue="#{e[0]}" itemLabel="#{e[1]}"/>
+                <p:ajax event="change" listener="#{structBean.onEmployeeChange}"
+                        update="strForm:summaryCards strForm:currentTable strForm:historyTable"/>
+            </p:selectOneMenu>
+        </div>
+        <p:commandButton value="إضافة مكوّن" icon="pi pi-plus"
+            styleClass="p-button-success"
+            rendered="#{structBean.employeeId != null}"
+            action="#{structBean.prepareAdd}"
+            update="strForm:addDialog"
+            oncomplete="PF('addDlg').show()"/>
+    </div>
+</div>
+
+<!-- ══ بطاقات الملخص ══ -->
+<div id="summaryCards"
+     style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:16px"
+     rendered="#{structBean.employeeId != null}">
+
+    <div class="struct-summary-card" style="border-top:4px solid #0F6E56">
+        <div class="struct-summary-label">إجمالي الاستحقاقات</div>
+        <div class="struct-summary-val" style="color:#0F6E56">
+            <h:outputText value="#{structBean.totalEarnings}">
+                <f:convertNumber pattern="#,##0.00"/>
+            </h:outputText>
+        </div>
+    </div>
+
+    <div class="struct-summary-card" style="border-top:4px solid #e74c3c">
+        <div class="struct-summary-label">إجمالي الخصومات</div>
+        <div class="struct-summary-val" style="color:#e74c3c">
+            <h:outputText value="#{structBean.totalDeductions}">
+                <f:convertNumber pattern="#,##0.00"/>
+            </h:outputText>
+        </div>
+    </div>
+
+    <div class="struct-summary-card"
+         style="border-top:4px solid #1B3A6B;background:#f0f4f8">
+        <div class="struct-summary-label">صافي الراتب الشهري</div>
+        <div class="struct-summary-val" style="color:#1B3A6B;font-size:24px">
+            <h:outputText value="#{structBean.netSalary}">
+                <f:convertNumber pattern="#,##0.00"/>
+            </h:outputText>
+        </div>
+    </div>
+
+</div>
+
+<!-- ══ المكوّنات السارية حالياً ══ -->
+<div class="joud-card" style="margin-bottom:16px">
+    <div class="joud-card-header">
+        <span class="joud-card-title">
+            <i class="pi pi-check-circle" style="margin-left:8px;color:#0F6E56"/>
+            المكوّنات السارية حالياً
+        </span>
+    </div>
+
+    <p:dataTable id="currentTable" value="#{structBean.currentStructure}" var="s"
+                 styleClass="report-table"
+                 emptyMessage="#{structBean.employeeId == null ? 'اختر موظفاً أولاً' : 'لا توجد مكوّنات سارية'}">
+
+        <p:column headerText="المكوّن" style="font-weight:600">
+            <h:outputText value="#{s.componentName}"/>
+        </p:column>
+
+        <p:column headerText="النوع" style="width:90px;text-align:center">
+            <span class="comp-type-#{s.componentType}">
+                #{structBean.getComponentTypeLabel(s.componentType)}
+            </span>
+        </p:column>
+
+        <p:column headerText="المبلغ" style="width:150px;direction:ltr;text-align:left">
+            <span style="font-size:16px;font-weight:800">
+                <h:outputText value="#{s.amount}">
+                    <f:convertNumber pattern="#,##0.00"/>
+                </h:outputText>
+            </span>
+            <span style="font-size:11px;color:#888;margin-right:4px">#{s.currencySymbol}</span>
+        </p:column>
+
+        <p:column headerText="سريان من" style="width:110px">
+            <h:outputText value="#{s.dateFrom}">
+                <f:convertDateTime pattern="dd/MM/yyyy"/>
+            </h:outputText>
+        </p:column>
+
+        <p:column headerText="إنهاء" style="width:80px;text-align:center">
+            <p:commandButton icon="pi pi-stop-circle" title="إنهاء سريان المكوّن"
+                styleClass="p-button-warning p-button-text p-button-sm"
+                action="#{structBean.endComponent(s)}"
+                update="strForm:summaryCards strForm:currentTable strForm:historyTable strForm:msgs"
+                onclick="return confirm('إنهاء سريان هذا المكوّن من اليوم؟')"/>
+        </p:column>
+
+    </p:dataTable>
+</div>
+
+<!-- ══ السجل التاريخي ══ -->
+<div class="joud-card">
+    <div class="joud-card-header">
+        <span class="joud-card-title">
+            <i class="pi pi-history" style="margin-left:8px;color:#2E75B6"/>
+            السجل الكامل (شاملاً المنتهي)
+        </span>
+    </div>
+
+    <p:dataTable id="historyTable" value="#{structBean.historyStructure}" var="s"
+                 styleClass="report-table" rows="15" paginator="true"
+                 emptyMessage="#{structBean.employeeId == null ? 'اختر موظفاً أولاً' : 'لا يوجد سجل'}">
+
+        <p:column headerText="المكوّن" style="font-weight:600">
+            <h:outputText value="#{s.componentName}"/>
+        </p:column>
+
+        <p:column headerText="النوع" style="width:90px;text-align:center">
+            <span class="comp-type-#{s.componentType}">
+                #{structBean.getComponentTypeLabel(s.componentType)}
+            </span>
+        </p:column>
+
+        <p:column headerText="المبلغ" style="width:150px;direction:ltr;text-align:left">
+            <h:outputText value="#{s.amount}">
+                <f:convertNumber pattern="#,##0.00"/>
+            </h:outputText>
+            <span style="font-size:11px;color:#888;margin-right:4px">#{s.currencySymbol}</span>
+        </p:column>
+
+        <p:column headerText="من" style="width:110px">
+            <h:outputText value="#{s.dateFrom}">
+                <f:convertDateTime pattern="dd/MM/yyyy"/>
+            </h:outputText>
+        </p:column>
+
+        <p:column headerText="إلى" style="width:110px">
+            <h:outputText value="#{s.dateTo}" rendered="#{s.dateTo != null}">
+                <f:convertDateTime pattern="dd/MM/yyyy"/>
+            </h:outputText>
+            <span rendered="#{s.dateTo == null}"
+                  style="font-size:11px;background:#d1e7dd;color:#0f5132;
+                         padding:2px 8px;border-radius:10px">ساري</span>
+        </p:column>
+
+    </p:dataTable>
+</div>
+
+<!-- ══ Dialog: إضافة مكوّن ══ -->
+<p:dialog id="addDialog" header="إضافة مكوّن للهيكل"
+          widgetVar="addDlg" modal="true" style="width:440px"
+          visible="#{structBean.showAddDialog}">
+
+    <div style="display:grid;gap:14px;padding:8px">
+
+        <div>
+            <label class="field-label">المكوّن *</label>
+            <p:selectOneMenu value="#{structBean.newComponentId}" style="width:100%"
+                             filter="true">
+                <f:selectItem itemLabel="— اختر المكوّن —" itemValue="#{null}"/>
+                <f:selectItems value="#{structBean.components}"
+                               var="c" itemValue="#{c.id}"
+                               itemLabel="#{c.type.toString()=='E'?'[إضافة]':'[خصم]'} #{c.name}"/>
+            </p:selectOneMenu>
+        </div>
+
+        <div>
+            <label class="field-label">المبلغ *</label>
+            <p:inputNumber value="#{structBean.newAmount}" decimalPlaces="2"
+                           style="width:100%" placeholder="0.00"/>
+        </div>
+
+        <div>
+            <label class="field-label">العملة</label>
+            <p:selectOneMenu value="#{structBean.newCurrencyId}" style="width:100%">
+                <f:selectItem itemLabel="— اختر العملة —" itemValue="#{null}"/>
+                <f:selectItems value="#{structBean.currencies}"
+                               var="c" itemValue="#{c[0]}"
+                               itemLabel="#{c[2]} — #{c[1]}"/>
+            </p:selectOneMenu>
+        </div>
+
+        <div>
+            <label class="field-label">سريان من</label>
+            <p:datePicker value="#{structBean.newDateFrom}" pattern="dd/MM/yyyy"
+                          style="width:100%" showIcon="true"/>
+        </div>
+
+        <div style="background:#fff8e1;border-radius:8px;padding:10px;
+                    font-size:12px;color:#856404;border-right:4px solid #ffc107">
+            <i class="pi pi-info-circle" style="margin-left:5px"/>
+            إذا كان المكوّن نفسه موجوداً وسارياً، سيُنهى تلقائياً باليوم السابق لتاريخ البداية الجديدة.
+        </div>
+
+    </div>
+
+    <f:facet name="footer">
+        <div style="display:flex;gap:8px;justify-content:flex-end">
+            <p:commandButton value="إضافة" icon="pi pi-plus" styleClass="p-button-success"
+                action="#{structBean.addComponent}"
+                update="strForm:summaryCards strForm:currentTable strForm:historyTable strForm:msgs"
+                oncomplete="if(!args.validationFailed) PF('addDlg').hide()"/>
+            <p:commandButton value="إلغاء" icon="pi pi-times"
+                styleClass="p-button-outlined p-button-secondary"
+                action="#{structBean.closeDialog}"
+                onclick="PF('addDlg').hide()"/>
+        </div>
+    </f:facet>
+
+</p:dialog>
+
+</h:form>
+</ui:define>
+</ui:composition>
+</html>

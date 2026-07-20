@@ -1,0 +1,189 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="jakarta.faces.html"
+      xmlns:f="jakarta.faces.core"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:ui="jakarta.faces.facelets"
+      lang="ar" dir="rtl">
+
+<ui:composition template="/WEB-INF/template.xhtml">
+<ui:define name="pageTitle">إدارة المستودعات</ui:define>
+<ui:define name="extraStyles">
+    <h:outputStylesheet library="css" name="inventory.css"/>
+</ui:define>
+
+<ui:define name="content">
+<h:form id="wareForm">
+<p:growl id="msgs" life="4000"/>
+
+<!-- ══ إحصاءات ══ -->
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:18px">
+
+    <div class="joud-card inv-stat" style="border-right:4px solid #0F6E56">
+        <div class="inv-stat-label"><i class="pi pi-building"/> المستودعات النشطة</div>
+        <div class="inv-stat-val" style="color:#0F6E56">#{wareBean.activeCount}</div>
+    </div>
+
+    <div class="joud-card inv-stat" style="border-right:4px solid #1B3A6B">
+        <div class="inv-stat-label"><i class="pi pi-dollar"/> قيمة المخزون الكلية</div>
+        <div class="inv-stat-val" style="color:#1B3A6B;font-size:16px;direction:ltr">
+            <h:outputText value="#{prodBean.totalValue}">
+                <f:convertNumber pattern="#,##0.00"/>
+            </h:outputText>
+        </div>
+    </div>
+
+    <div class="joud-card inv-stat" style="border-right:4px solid #2E75B6">
+        <div class="inv-stat-label"><i class="pi pi-box"/> إجمالي الأصناف</div>
+        <div class="inv-stat-val" style="color:#2E75B6">#{prodBean.totalActive}</div>
+    </div>
+
+</div>
+
+<!-- ══ شريط الإجراءات ══ -->
+<div class="joud-card" style="margin-bottom:14px">
+    <div style="display:flex;justify-content:flex-end">
+        <p:commandButton value="مستودع جديد" icon="pi pi-plus"
+            styleClass="p-button-success"
+            action="#{wareBean.prepareNew}"
+            update="wareForm:wareDialog"
+            oncomplete="PF('wareDlg').show()"/>
+    </div>
+</div>
+
+<!-- ══ بطاقات المستودعات ══ -->
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px">
+
+    <ui:repeat value="#{wareBean.warehouses}" var="w">
+    <div class="joud-card ware-card #{w.active==1?'':'ware-inactive'}">
+
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
+            <div>
+                <div style="font-size:16px;font-weight:800;color:#1B3A6B">#{w.name}</div>
+                <div style="font-size:12px;color:#888;margin-top:2px">#{w.code}</div>
+            </div>
+            <span class="inv-badge ware-type-#{w.type}">#{w.typeLabel}</span>
+        </div>
+
+        <div style="font-size:12px;color:#666;line-height:1.8">
+            <ui:fragment rendered="#{w.manager != null}">
+                <i class="pi pi-user" style="margin-left:5px"/>#{w.manager}<br/>
+            </ui:fragment>
+            <ui:fragment rendered="#{w.phone != null}">
+                <i class="pi pi-phone" style="margin-left:5px"/>#{w.phone}<br/>
+            </ui:fragment>
+            <ui:fragment rendered="#{w.address != null}">
+                <i class="pi pi-map-marker" style="margin-left:5px"/>#{w.address}<br/>
+            </ui:fragment>
+        </div>
+
+        <!-- إحصاءات المستودع -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;
+                    margin-top:12px;padding-top:12px;border-top:1px solid #f0f4f8">
+            <div style="text-align:center">
+                <div style="font-size:10px;color:#888">عدد الأصناف</div>
+                <div style="font-size:18px;font-weight:800;color:#1B3A6B">
+                    #{wareBean.getProductCount(w.id)}
+                </div>
+            </div>
+            <div style="text-align:center">
+                <div style="font-size:10px;color:#888">قيمة المخزون</div>
+                <div style="font-size:13px;font-weight:700;color:#0F6E56;direction:ltr">
+                    <h:outputText value="#{wareBean.getStockValue(w.id)}">
+                        <f:convertNumber pattern="#,##0"/>
+                    </h:outputText>
+                </div>
+            </div>
+        </div>
+
+        <!-- أزرار الإجراءات -->
+        <div style="display:flex;gap:8px;margin-top:12px">
+            <p:commandButton value="تعديل" icon="pi pi-pencil"
+                styleClass="p-button-outlined p-button-sm" style="flex:1"
+                action="#{wareBean.prepareEdit(w)}"
+                update="wareForm:wareDialog"
+                oncomplete="PF('wareDlg').show()"/>
+            <p:commandButton icon="#{w.active==1?'pi pi-ban':'pi pi-check'}"
+                styleClass="#{w.active==1?'p-button-danger p-button-outlined p-button-sm':'p-button-success p-button-outlined p-button-sm'}"
+                title="#{w.active==1?'إيقاف':'تفعيل'}"
+                action="#{wareBean.toggleActive(w)}"
+                update="wareForm:msgs"
+                oncomplete="location.reload()"/>
+        </div>
+
+    </div>
+    </ui:repeat>
+
+</div>
+
+<!-- ══ Dialog: إضافة / تعديل مستودع ══ -->
+<p:dialog id="wareDialog" header="#{wareBean.editMode?'تعديل مستودع':'مستودع جديد'}"
+          widgetVar="wareDlg" modal="true" style="width:520px"
+          visible="#{wareBean.showDialog}">
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:14px">
+
+        <div style="grid-column:span 2">
+            <label class="inv-label">اسم المستودع *</label>
+            <p:inputText value="#{wareBean.selected.name}" required="true"
+                         style="width:100%"/>
+        </div>
+        <div>
+            <label class="inv-label">نوع المستودع</label>
+            <p:selectOneMenu value="#{wareBean.selected.type}" style="width:100%">
+                <f:selectItem itemLabel="رئيسي"    itemValue="main"/>
+                <f:selectItem itemLabel="عبور"     itemValue="transit"/>
+                <f:selectItem itemLabel="مردودات"  itemValue="return"/>
+            </p:selectOneMenu>
+        </div>
+        <div>
+            <label class="inv-label">المسؤول</label>
+            <p:inputText value="#{wareBean.selected.manager}" style="width:100%"/>
+        </div>
+        <div>
+            <label class="inv-label">الهاتف</label>
+            <p:inputText value="#{wareBean.selected.phone}" style="width:100%"/>
+        </div>
+        <div>
+            <label class="inv-label">الحالة</label>
+            <p:selectOneMenu value="#{wareBean.selected.active}" style="width:100%">
+                <f:selectItem itemLabel="نشط"    itemValue="1"/>
+                <f:selectItem itemLabel="موقوف"  itemValue="0"/>
+            </p:selectOneMenu>
+        </div>
+        <div style="grid-column:span 2">
+            <label class="inv-label">العنوان</label>
+            <p:inputText value="#{wareBean.selected.address}" style="width:100%"/>
+        </div>
+        <div style="grid-column:span 2">
+            <label class="inv-label">الموقع / الإحداثيات</label>
+            <p:inputText value="#{wareBean.selected.location}" style="width:100%"
+                         placeholder="مثلاً: المنطقة الصناعية، المبنى 5"/>
+        </div>
+        <div style="grid-column:span 2">
+            <label class="inv-label">ملاحظات</label>
+            <p:inputTextarea value="#{wareBean.selected.notes}"
+                             style="width:100%" rows="2"/>
+        </div>
+
+    </div>
+
+    <f:facet name="footer">
+        <div style="display:flex;gap:8px;justify-content:flex-end">
+            <p:commandButton value="حفظ" icon="pi pi-check" styleClass="p-button-success"
+                action="#{wareBean.save}"
+                update="wareForm:msgs"
+                oncomplete="if(!args.validationFailed){ PF('wareDlg').hide(); location.reload(); }"/>
+            <p:commandButton value="إلغاء" icon="pi pi-times"
+                styleClass="p-button-outlined p-button-secondary"
+                onclick="PF('wareDlg').hide(); return false;"/>
+        </div>
+    </f:facet>
+
+</p:dialog>
+
+</h:form>
+</ui:define>
+</ui:composition>
+</html>

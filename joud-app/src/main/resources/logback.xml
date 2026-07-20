@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+    <!-- ════════════════════════════════════════════════
+         Joud ERP — إعدادات السجل (Logback)
+    ════════════════════════════════════════════════ -->
+
+    <!-- ─── ملف السجل اليومي ───────────────────────── -->
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${catalina.home}/logs/joud-erp.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <!-- ملف يومي جديد — يحتفظ بآخر 30 يوماً -->
+            <fileNamePattern>${catalina.home}/logs/joud-erp.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>30</maxHistory>
+        </rollingPolicy>
+        <encoder>
+            <charset>UTF-8</charset>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- ─── Console (للتطوير) ─────────────────────── -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <charset>UTF-8</charset>
+            <pattern>%d{HH:mm:ss} %-5level %logger{20} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- ─── مستويات السجل ──────────────────────────── -->
+
+    <!-- الوحدات الخاصة بجود — INFO -->
+    <logger name="com.joud" level="INFO"/>
+
+    <!-- Hibernate SQL — WARN في الإنتاج -->
+    <logger name="org.hibernate"              level="WARN"/>
+    <logger name="org.hibernate.SQL"          level="WARN"/>
+    <logger name="org.hibernate.type"         level="WARN"/>
+
+    <!-- PrimeFaces -->
+    <logger name="org.primefaces"             level="WARN"/>
+
+    <!-- Weld CDI -->
+    <logger name="org.jboss.weld"             level="WARN"/>
+
+    <!-- JasperReports -->
+    <logger name="net.sf.jasperreports"       level="WARN"/>
+
+    <!-- Root Logger -->
+    <root level="INFO">
+        <appender-ref ref="FILE"/>
+        <appender-ref ref="CONSOLE"/>
+    </root>
+
+</configuration>

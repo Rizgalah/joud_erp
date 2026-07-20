@@ -1,0 +1,286 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="jakarta.faces.html"
+      xmlns:f="jakarta.faces.core"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:ui="jakarta.faces.facelets"
+      lang="ar" dir="rtl">
+
+<ui:composition template="/WEB-INF/template.xhtml">
+<ui:define name="pageTitle">القيد اليومي</ui:define>
+
+<ui:define name="extraStyles">
+    <h:outputStylesheet library="css" name="accounting.css"/>
+</ui:define>
+
+<ui:define name="content">
+<h:form id="jvForm">
+
+<!-- ══════════════════════════════════════════════
+     الشريط العلوي
+══════════════════════════════════════════════ -->
+<div class="joud-card" style="margin-bottom:16px">
+    <div class="joud-card-header">
+        <span class="joud-card-title">
+            <i class="pi pi-pencil" style="margin-left:8px;color:#2E75B6"/>
+            قيد يومي جديد — <span style="color:#2E75B6">#{jvBean.reference}</span>
+        </span>
+        <div style="display:flex;gap:8px">
+            <p:commandButton value="مسودة" icon="pi pi-save"
+                styleClass="p-button-outlined p-button-secondary"
+                action="#{jvBean.saveDraft}" ajax="false"/>
+            <p:commandButton value="إرسال للاعتماد" icon="pi pi-send"
+                styleClass="p-button-success"
+                action="#{jvBean.submitForApproval}" ajax="false"
+                disabled="#{!jvBean.balanced}"/>
+        </div>
+    </div>
+
+    <!-- رأس القيد -->
+    <div class="jv-header">
+        <div>
+            <label>الفرع</label>
+            <p:selectOneMenu value="#{jvBean.agentId}" style="width:100%">
+                <f:selectItem itemLabel="— اختر الفرع —" itemValue="#{null}"/>
+                <f:selectItems value="#{jvBean.agents}"
+                               var="a" itemValue="#{a[0]}" itemLabel="#{a[1]}"/>
+            </p:selectOneMenu>
+        </div>
+        <div>
+            <label>التاريخ</label>
+            <p:datePicker value="#{jvBean.date}" pattern="dd/MM/yyyy"
+                          style="width:100%" showIcon="true"/>
+        </div>
+        <div>
+            <label>نوع القيد</label>
+            <p:selectOneMenu value="#{jvBean.jvType}" style="width:100%">
+                <f:selectItem itemLabel="قيد يدوي (JV)"  itemValue="JV"/>
+                <f:selectItem itemLabel="فاتورة (INV)"   itemValue="INV"/>
+                <f:selectItem itemLabel="دفعة (PAY)"     itemValue="PAY"/>
+                <f:selectItem itemLabel="راتب (SAL)"     itemValue="SAL"/>
+                <f:selectItem itemLabel="تسوية (ADJ)"    itemValue="ADJ"/>
+            </p:selectOneMenu>
+        </div>
+        <div>
+            <label>العملة</label>
+            <p:selectOneMenu value="#{jvBean.currencyId}" style="width:100%"
+                             valueChangeListener="#{jvBean.onCurrencyChange}">
+                <f:selectItem itemLabel="— اختر العملة —" itemValue="#{null}"/>
+                <f:selectItems value="#{jvBean.currencies}"
+                               var="c" itemValue="#{c[0]}"
+                               itemLabel="#{c[2]} — #{c[1]}"/>
+                <p:ajax event="change" update="exchRate"/>
+            </p:selectOneMenu>
+        </div>
+        <div>
+            <label>سعر الصرف</label>
+            <p:inputNumber id="exchRate" value="#{jvBean.exchangeRate}"
+                           decimalPlaces="6" style="width:100%"/>
+        </div>
+        <div style="grid-column:span 2">
+            <label>البيان</label>
+            <p:inputText value="#{jvBean.narration}" style="width:100%"
+                         placeholder="بيان القيد العام..."/>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     إدخال الأسطر
+══════════════════════════════════════════════ -->
+<div class="joud-card">
+    <div class="joud-card-header">
+        <span class="joud-card-title">
+            <i class="pi pi-list" style="margin-left:8px;color:#2E75B6"/>
+            أسطر القيد
+        </span>
+        <!-- مؤشر التوازن -->
+        <div style="display:flex;align-items:center;gap:10px">
+            <span style="font-size:13px;color:#666">حالة التوازن:</span>
+            <span style="font-weight:700;font-size:14px;
+                color:#{jvBean.balanced ? '#27ae60' : '#e74c3c'}">
+                #{jvBean.balanceStatus}
+            </span>
+        </div>
+    </div>
+
+    <!-- ─── سطر الإدخال ─────────────────────────── -->
+    <div style="display:grid;grid-template-columns:3fr 1fr 1.5fr 2fr auto;gap:10px;
+                padding:14px;background:#f8fafc;border-radius:8px;margin-bottom:14px;
+                align-items:flex-end">
+
+        <div>
+            <label style="font-size:12px;color:#666;display:block;margin-bottom:4px">الحساب</label>
+            <p:selectOneMenu value="#{jvBean.lineAccountType}" style="width:100%"
+                             filter="true" filterMatchMode="contains">
+                <f:selectItem itemLabel="— اختر الحساب —" itemValue="#{null}"/>
+                <f:selectItems value="#{jvBean.accounts}"
+                               var="a" itemValue="#{a[0]}"
+                               itemLabel="#{a[0]} — #{a[1]}"/>
+            </p:selectOneMenu>
+        </div>
+
+        <div>
+            <label style="font-size:12px;color:#666;display:block;margin-bottom:4px">مدين/دائن</label>
+            <p:selectOneMenu value="#{jvBean.lineDrCr}" style="width:100%">
+                <f:selectItem itemLabel="مدين  DR" itemValue="DR"/>
+                <f:selectItem itemLabel="دائن  CR" itemValue="CR"/>
+            </p:selectOneMenu>
+        </div>
+
+        <div>
+            <label style="font-size:12px;color:#666;display:block;margin-bottom:4px">المبلغ</label>
+            <p:inputNumber value="#{jvBean.lineAmount}" decimalPlaces="2"
+                           style="width:100%" placeholder="0.00"/>
+        </div>
+
+        <div>
+            <label style="font-size:12px;color:#666;display:block;margin-bottom:4px">البيان</label>
+            <p:inputText value="#{jvBean.lineNarration}" style="width:100%"
+                         placeholder="بيان السطر (اختياري)"/>
+        </div>
+
+        <div>
+            <p:commandButton icon="pi pi-plus" title="إضافة السطر"
+                styleClass="p-button-success p-button-rounded"
+                action="#{jvBean.addLine}"
+                update="jvForm:linesTable jvForm:totalsBar"
+                style="width:38px;height:38px"/>
+        </div>
+    </div>
+
+    <!-- ─── جدول الأسطر ─────────────────────────── -->
+    <p:dataTable id="linesTable" value="#{jvBean.lines}" var="line"
+                 styleClass="jv-lines-table" emptyMessage="لا توجد أسطر — أضف سطراً أعلاه"
+                 rowIndexVar="idx">
+
+        <p:column headerText="#" style="width:50px;text-align:center">
+            <h:outputText value="#{idx+1}"/>
+        </p:column>
+
+        <p:column headerText="الحساب" style="min-width:200px">
+            <h:outputText value="#{jvBean.getAccountName(line.accountType)}"/>
+        </p:column>
+
+        <p:column headerText="مدين/دائن" style="width:100px;text-align:center">
+            <span style="font-weight:700;color:#{line.drCr=='DR'?'#1a5276':'#1e8449'}">
+                #{line.drCr == 'DR' ? 'مدين' : 'دائن'}
+            </span>
+        </p:column>
+
+        <p:column headerText="المبلغ" style="width:140px;text-align:left;direction:ltr">
+            <span class="#{line.drCr=='DR'?'amt-dr':'amt-cr'}">
+                <h:outputText value="#{line.amount}">
+                    <f:convertNumber pattern="#,##0.00"/>
+                </h:outputText>
+            </span>
+        </p:column>
+
+        <p:column headerText="بالعملة الأساسية" style="width:150px;text-align:left;direction:ltr">
+            <h:outputText value="#{line.amountBase}">
+                <f:convertNumber pattern="#,##0.00"/>
+            </h:outputText>
+        </p:column>
+
+        <p:column headerText="البيان">
+            <h:outputText value="#{line.narration}"/>
+        </p:column>
+
+        <p:column headerText="حذف" style="width:60px;text-align:center">
+            <p:commandButton icon="pi pi-trash" styleClass="p-button-danger p-button-text p-button-sm"
+                title="حذف السطر"
+                action="#{jvBean.removeLine(idx)}"
+                update="jvForm:linesTable jvForm:totalsBar"/>
+        </p:column>
+
+    </p:dataTable>
+
+    <!-- ─── شريط الإجماليات ──────────────────────── -->
+    <div id="totalsBar" class="jv-totals-row">
+        <div class="jv-total-item">
+            <span class="jv-total-label">إجمالي المدين</span>
+            <span class="jv-total-value dr">
+                <h:outputText value="#{jvBean.totalDebit}">
+                    <f:convertNumber pattern="#,##0.00"/>
+                </h:outputText>
+            </span>
+        </div>
+        <div class="jv-total-item">
+            <span class="jv-total-label">إجمالي الدائن</span>
+            <span class="jv-total-value cr">
+                <h:outputText value="#{jvBean.totalCredit}">
+                    <f:convertNumber pattern="#,##0.00"/>
+                </h:outputText>
+            </span>
+        </div>
+        <div class="jv-total-item">
+            <span class="jv-total-label">الفرق</span>
+            <span class="jv-total-value #{jvBean.balanced ? 'balanced' : 'diff'}">
+                #{jvBean.balanced ? '✓ متوازن' : jvBean.difference}
+            </span>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     آخر القيود
+══════════════════════════════════════════════ -->
+<div class="joud-card">
+    <div class="joud-card-header">
+        <span class="joud-card-title">
+            <i class="pi pi-history" style="margin-left:8px;color:#2E75B6"/>
+            آخر القيود المسجلة
+        </span>
+    </div>
+
+    <p:dataTable value="#{jvBean.recentEntries}" var="jv"
+                 styleClass="report-table" rows="10" paginator="true"
+                 emptyMessage="لا توجد قيود مسجلة">
+
+        <p:column headerText="رقم القيد"   style="width:130px">
+            <h:outputText value="#{jv.reference}"/>
+        </p:column>
+        <p:column headerText="التاريخ"      style="width:110px">
+            <h:outputText value="#{jv.date}">
+                <f:convertDateTime pattern="dd/MM/yyyy"/>
+            </h:outputText>
+        </p:column>
+        <p:column headerText="النوع"        style="width:80px;text-align:center">
+            <h:outputText value="#{jv.type}"/>
+        </p:column>
+        <p:column headerText="البيان">
+            <h:outputText value="#{jv.narration}"/>
+        </p:column>
+        <p:column headerText="إجمالي مدين" style="width:130px;direction:ltr;text-align:left">
+            <span class="amt-dr">
+                <h:outputText value="#{jv.totalDebit}">
+                    <f:convertNumber pattern="#,##0.00"/>
+                </h:outputText>
+            </span>
+        </p:column>
+        <p:column headerText="الحالة"       style="width:100px;text-align:center">
+            <span class="jv-badge #{jv.status=='O'?'draft':jv.status=='P'?'pending':jv.status=='A'?'approved':'void'}">
+                #{jv.status=='O'?'مسودة':jv.status=='P'?'للاعتماد':jv.status=='A'?'معتمد':'ملغى'}
+            </span>
+        </p:column>
+        <p:column headerText="إجراء"        style="width:130px;text-align:center">
+            <p:commandButton icon="pi pi-check" title="اعتماد وترحيل"
+                styleClass="p-button-success p-button-text p-button-sm"
+                rendered="#{jv.status=='P'}"
+                action="#{jvBean.approveAndPost(jv.id)}"
+                update="jvForm"/>
+            <p:commandButton icon="pi pi-ban" title="إلغاء"
+                styleClass="p-button-danger p-button-text p-button-sm"
+                rendered="#{jv.status=='A'}"
+                action="#{jvBean.voidEntry(jv.id,'إلغاء يدوي')}"
+                update="jvForm"/>
+        </p:column>
+
+    </p:dataTable>
+</div>
+
+</h:form>
+</ui:define>
+</ui:composition>
+</html>

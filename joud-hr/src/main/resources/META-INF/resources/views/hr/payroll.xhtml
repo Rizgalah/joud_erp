@@ -1,0 +1,270 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="jakarta.faces.html"
+      xmlns:f="jakarta.faces.core"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:ui="jakarta.faces.facelets"
+      lang="ar" dir="rtl">
+
+<ui:composition template="/WEB-INF/template.xhtml">
+<ui:define name="pageTitle">مسير الرواتب</ui:define>
+
+<ui:define name="extraStyles">
+    <h:outputStylesheet library="css" name="hr.css"/>
+</ui:define>
+
+<ui:define name="content">
+<h:form id="payForm">
+<p:growl id="msgs" life="5000" showDetail="true"/>
+
+<!-- ══════════════════════════════════════════════
+     توليد مسير جديد
+══════════════════════════════════════════════ -->
+<div class="joud-card" style="margin-bottom:16px">
+    <div class="joud-card-header">
+        <span class="joud-card-title">
+            <i class="pi pi-cog" style="margin-left:8px;color:#2E75B6"/>
+            توليد مسير رواتب جديد
+        </span>
+    </div>
+
+    <div style="display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap">
+
+        <div>
+            <label class="field-label">السنة</label>
+            <p:selectOneMenu value="#{payrollBean.year}" style="width:100px">
+                <f:selectItem itemLabel="2024" itemValue="2024"/>
+                <f:selectItem itemLabel="2025" itemValue="2025"/>
+                <f:selectItem itemLabel="2026" itemValue="2026"/>
+            </p:selectOneMenu>
+        </div>
+
+        <div>
+            <label class="field-label">الشهر</label>
+            <p:selectOneMenu value="#{payrollBean.month}" style="width:130px">
+                <f:selectItem itemLabel="يناير"   itemValue="1"/>
+                <f:selectItem itemLabel="فبراير"  itemValue="2"/>
+                <f:selectItem itemLabel="مارس"    itemValue="3"/>
+                <f:selectItem itemLabel="أبريل"   itemValue="4"/>
+                <f:selectItem itemLabel="مايو"    itemValue="5"/>
+                <f:selectItem itemLabel="يونيو"   itemValue="6"/>
+                <f:selectItem itemLabel="يوليو"   itemValue="7"/>
+                <f:selectItem itemLabel="أغسطس"   itemValue="8"/>
+                <f:selectItem itemLabel="سبتمبر"  itemValue="9"/>
+                <f:selectItem itemLabel="أكتوبر"  itemValue="10"/>
+                <f:selectItem itemLabel="نوفمبر"  itemValue="11"/>
+                <f:selectItem itemLabel="ديسمبر"  itemValue="12"/>
+            </p:selectOneMenu>
+        </div>
+
+        <div>
+            <label class="field-label">العملة</label>
+            <p:selectOneMenu value="#{payrollBean.currencyId}" style="width:160px">
+                <f:selectItem itemLabel="— اختر العملة —" itemValue="#{null}"/>
+                <f:selectItems value="#{payrollBean.currencies}"
+                               var="c" itemValue="#{c[0]}"
+                               itemLabel="#{c[2]} — #{c[1]}"/>
+            </p:selectOneMenu>
+        </div>
+
+        <p:commandButton value="توليد المسير" icon="pi pi-play"
+            styleClass="p-button-success"
+            action="#{payrollBean.generate}"
+            update="payForm:payTable payForm:msgs"
+            onclick="return confirm('توليد مسير رواتب #{payrollBean.month}/#{payrollBean.year}؟');"/>
+
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     قائمة المسيرات
+══════════════════════════════════════════════ -->
+<div class="joud-card">
+    <div class="joud-card-header">
+        <span class="joud-card-title">
+            <i class="pi pi-list" style="margin-left:8px;color:#2E75B6"/>
+            سجل مسيرات الرواتب
+        </span>
+    </div>
+
+    <p:dataTable id="payTable" value="#{payrollBean.payrollList}" var="pay"
+                 styleClass="report-table" rows="15" paginator="true"
+                 emptyMessage="لا يوجد مسيرات رواتب مسجلة">
+
+        <p:column headerText="الفترة" style="width:100px;text-align:center;font-weight:700;color:#1B3A6B">
+            #{pay.year}/#{String.format('%02d',pay.month)}
+        </p:column>
+
+        <p:column headerText="الوصف">
+            <h:outputText value="#{pay.description}"/>
+        </p:column>
+
+        <p:column headerText="الموظفون" style="width:90px;text-align:center">
+            <span style="font-weight:700;color:#1B3A6B">#{pay.employeeCount}</span>
+        </p:column>
+
+        <p:column headerText="إجمالي الاستحقاقات" style="width:160px;direction:ltr;text-align:left">
+            <span class="amt-earn">
+                <h:outputText value="#{pay.totalEarnings}">
+                    <f:convertNumber pattern="#,##0.00"/>
+                </h:outputText>
+            </span>
+        </p:column>
+
+        <p:column headerText="إجمالي الخصومات" style="width:150px;direction:ltr;text-align:left">
+            <span class="amt-ded">
+                (<h:outputText value="#{pay.totalDeductions}">
+                    <f:convertNumber pattern="#,##0.00"/>
+                </h:outputText>)
+            </span>
+        </p:column>
+
+        <p:column headerText="صافي الراتب" style="width:150px;direction:ltr;text-align:left">
+            <span style="font-weight:800;font-size:14px;color:#0F6E56">
+                <h:outputText value="#{pay.netPay}">
+                    <f:convertNumber pattern="#,##0.00"/>
+                </h:outputText>
+            </span>
+        </p:column>
+
+        <p:column headerText="تاريخ الإنشاء" style="width:120px;text-align:center">
+            <h:outputText value="#{pay.createdAt}">
+                <f:convertDateTime pattern="dd/MM/yyyy"/>
+            </h:outputText>
+        </p:column>
+
+        <p:column headerText="الحالة" style="width:90px;text-align:center">
+            <span class="hr-badge #{payrollBean.getStatusClass(pay.status)}">
+                #{payrollBean.getStatusLabel(pay.status)}
+            </span>
+        </p:column>
+
+        <p:column headerText="إجراء" style="width:130px;text-align:center">
+
+            <!-- اعتماد -->
+            <p:commandButton icon="pi pi-check" title="اعتماد"
+                styleClass="p-button-success p-button-text p-button-sm"
+                rendered="#{pay.canApprove()}"
+                action="#{payrollBean.approve(pay.id)}"
+                update="payForm:payTable payForm:msgs"
+                onclick="return confirm('اعتماد مسير #{pay.description}؟')"/>
+
+            <!-- تفاصيل -->
+            <p:commandButton icon="pi pi-eye" title="عرض التفاصيل"
+                styleClass="p-button-info p-button-text p-button-sm"
+                action="#{payrollBean.viewDetail(pay)}"
+                update="payForm:detailPanel"
+                oncomplete="PF('detailDlg').show()"/>
+
+            <!-- إلغاء -->
+            <p:commandButton icon="pi pi-ban" title="إلغاء"
+                styleClass="p-button-danger p-button-text p-button-sm"
+                rendered="#{!pay.isPaid() and !pay.isVoid()}"
+                action="#{payrollBean.voidPayroll(pay.id)}"
+                update="payForm:payTable payForm:msgs"
+                onclick="return confirm('إلغاء المسير؟ لا يمكن التراجع.')"/>
+
+        </p:column>
+
+    </p:dataTable>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     Dialog: تفاصيل المسير
+══════════════════════════════════════════════ -->
+<p:dialog id="detailPanel"
+          header="تفاصيل المسير — #{payrollBean.selected.description}"
+          widgetVar="detailDlg" modal="true" resizable="true"
+          style="width:820px" visible="#{payrollBean.showDetail}">
+
+    <ui:fragment rendered="#{payrollBean.selected != null}">
+
+        <!-- ملخص -->
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
+            <div style="background:#e8f0fa;border-radius:8px;padding:12px;text-align:center">
+                <div style="font-size:11px;color:#666">الموظفون</div>
+                <div style="font-size:20px;font-weight:800;color:#1B3A6B">
+                    #{payrollBean.selected.employeeCount}
+                </div>
+            </div>
+            <div style="background:#e8f8f0;border-radius:8px;padding:12px;text-align:center">
+                <div style="font-size:11px;color:#666">إجمالي الاستحقاقات</div>
+                <div style="font-size:16px;font-weight:800;color:#0F6E56;direction:ltr">
+                    <h:outputText value="#{payrollBean.selected.totalEarnings}">
+                        <f:convertNumber pattern="#,##0.00"/>
+                    </h:outputText>
+                </div>
+            </div>
+            <div style="background:#fdecea;border-radius:8px;padding:12px;text-align:center">
+                <div style="font-size:11px;color:#666">إجمالي الخصومات</div>
+                <div style="font-size:16px;font-weight:800;color:#c0392b;direction:ltr">
+                    <h:outputText value="#{payrollBean.selected.totalDeductions}">
+                        <f:convertNumber pattern="#,##0.00"/>
+                    </h:outputText>
+                </div>
+            </div>
+            <div style="background:#e8f0fa;border-radius:8px;padding:12px;text-align:center;border:2px solid #1B3A6B">
+                <div style="font-size:11px;color:#666">صافي الرواتب</div>
+                <div style="font-size:18px;font-weight:800;color:#1B3A6B;direction:ltr">
+                    <h:outputText value="#{payrollBean.selected.netPay}">
+                        <f:convertNumber pattern="#,##0.00"/>
+                    </h:outputText>
+                </div>
+            </div>
+        </div>
+
+        <!-- جدول ملخص الموظفين -->
+        <p:dataTable value="#{payrollBean.empSummary}" var="row"
+                     styleClass="report-table" rows="20" paginator="true"
+                     emptyMessage="لا توجد تفاصيل">
+
+            <p:column headerText="اسم الموظف">
+                <h:outputText value="#{row[1]}"/>
+            </p:column>
+            <p:column headerText="الاستحقاقات" style="width:150px;direction:ltr;text-align:left">
+                <span class="amt-earn">
+                    <h:outputText value="#{row[2]}">
+                        <f:convertNumber pattern="#,##0.00"/>
+                    </h:outputText>
+                </span>
+            </p:column>
+            <p:column headerText="الخصومات" style="width:130px;direction:ltr;text-align:left">
+                <span class="amt-ded">
+                    <h:outputText value="#{row[3]}">
+                        <f:convertNumber pattern="#,##0.00"/>
+                    </h:outputText>
+                </span>
+            </p:column>
+            <p:column headerText="الصافي" style="width:140px;direction:ltr;text-align:left">
+                <span style="font-weight:800;color:#0F6E56">
+                    <h:outputText value="#{row[4]}">
+                        <f:convertNumber pattern="#,##0.00"/>
+                    </h:outputText>
+                </span>
+            </p:column>
+
+        </p:dataTable>
+
+    </ui:fragment>
+
+    <f:facet name="footer">
+        <div style="display:flex;gap:8px;justify-content:flex-end">
+            <p:commandButton value="PDF" icon="pi pi-file-pdf"
+                styleClass="p-button-danger p-button-outlined"
+                action="#{payrollBean.exportPdf}" ajax="false"/>
+            <p:commandButton value="Excel" icon="pi pi-file-excel"
+                styleClass="p-button-success p-button-outlined"
+                action="#{payrollBean.exportExcel}" ajax="false"/>
+            <p:commandButton value="إغلاق" icon="pi pi-times"
+                styleClass="p-button-outlined p-button-secondary"
+                onclick="PF('detailDlg').hide(); return false;"/>
+        </div>
+    </f:facet>
+
+</p:dialog>
+
+</h:form>
+</ui:define>
+</ui:composition>
+</html>

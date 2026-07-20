@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:h="jakarta.faces.html" xmlns:p="http://primefaces.org/ui"
+    xmlns:ui="jakarta.faces.facelets" lang="ar" dir="rtl">
+
+<ui:composition template="/WEB-INF/template.xhtml">
+
+
+    <ui:define name="pageTitle">الرئيسية — لوحة التحكم</ui:define>
+
+    <ui:define name="content">
+
+        <!-- ترحيب -->
+        <div style="margin-bottom:24px">
+            <h2 style="font-size:20px;color:#1B3A6B;font-weight:700">
+                مرحباً، #{navbarBean.currentUsername} 👋
+            </h2>
+            <p style="color:#888;font-size:13px;margin-top:4px">
+                #{navbarBean.currentDayName}، #{navbarBean.currentDate}
+            </p>
+        </div>
+
+        <!-- بطاقات الإحصاء -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;margin-bottom:24px">
+
+            <div class="joud-card" style="border-right:4px solid #2E75B6">
+                <div style="font-size:12px;color:#888;margin-bottom:6px">الوحدات المثبتة</div>
+                <div style="font-size:28px;font-weight:800;color:#1B3A6B">#{navbarBean.installedModulesCount}</div>
+                <div style="font-size:12px;color:#2E75B6;margin-top:4px">
+                    <i class="pi pi-th-large" /> وحدة نشطة
+                </div>
+            </div>
+
+            <div class="joud-card" style="border-right:4px solid #0F6E56">
+                <div style="font-size:12px;color:#888;margin-bottom:6px">النظام</div>
+                <div style="font-size:18px;font-weight:800;color:#0F6E56">يعمل</div>
+                <div style="font-size:12px;color:#0F6E56;margin-top:4px">
+                    <i class="pi pi-check-circle" /> جميع الخدمات تعمل
+                </div>
+            </div>
+
+            <div class="joud-card" style="border-right:4px solid #e67e22">
+                <div style="font-size:12px;color:#888;margin-bottom:6px">الإصدار</div>
+                <div style="font-size:18px;font-weight:800;color:#e67e22">v1.0.0</div>
+                <div style="font-size:12px;color:#e67e22;margin-top:4px">
+                    <i class="pi pi-info-circle" /> Jakarta EE 10 / Java 21
+                </div>
+            </div>
+
+        </div>
+
+        <!-- بطاقة الوحدات المثبتة -->
+        <div class="joud-card">
+            <div class="joud-card-header">
+                <span class="joud-card-title">
+                    <i class="pi pi-th-large" style="margin-left:8px;color:#2E75B6" />
+                    الوحدات المثبتة
+                </span>
+            </div>
+            <p style="color:#aaa;text-align:center;padding:30px;font-size:13px">
+                <i class="pi pi-info-circle" style="font-size:24px;display:block;margin-bottom:8px" />
+                الوحدات ستظهر هنا بعد تثبيت أول Plugin
+            </p>
+        </div>
+
+    </ui:define>
+
+</ui:composition>
+
+</html>

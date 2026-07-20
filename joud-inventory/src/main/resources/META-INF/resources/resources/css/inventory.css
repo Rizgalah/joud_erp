@@ -1,0 +1,130 @@
+/* ═══════════════════════════════════════════════════
+   Joud ERP — Inventory Module Styles
+   ═══════════════════════════════════════════════════ */
+
+/* ─── Labels ─────────────────────────────────────── */
+.inv-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: #555;
+    margin-bottom: 5px;
+}
+
+/* ─── بطاقات الإحصاء ─────────────────────────────── */
+.inv-stat {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.inv-stat-label {
+    font-size: 11px;
+    color: #888;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+.inv-stat-val {
+    font-size: 28px;
+    font-weight: 900;
+    line-height: 1;
+}
+.inv-warn  { background: #fffbf0 !important; }
+.inv-danger{ background: #fff5f5 !important; }
+
+/* ─── الشارات ─────────────────────────────────────── */
+.inv-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+/* حالة الصنف */
+.status-A { background:#d1e7dd; color:#0f5132; border:1px solid #a3cfbb; }
+.status-D { background:#e2e3e5; color:#41464b; border:1px solid #c4c8cb; }
+.status-O { background:#f8d7da; color:#842029; border:1px solid #f1aeb5; }
+
+/* نوع الحركة */
+.move-IN  { background:#d1e7dd; color:#0f5132; }
+.move-OUT { background:#f8d7da; color:#842029; }
+.move-ADJ { background:#cfe2ff; color:#084298; }
+.move-TRF { background:#e2d9f3; color:#432874; }
+
+/* حالة الجرد */
+.count-D { background:#f8f9fa; color:#6c757d; border:1px solid #dee2e6; }
+.count-I { background:#fff3cd; color:#856404; border:1px solid #ffc107; }
+.count-C { background:#d1e7dd; color:#0f5132; border:1px solid #a3cfbb; }
+.count-P { background:#cfe2ff; color:#084298; border:1px solid #9ec5fe; }
+
+/* نوع المستودع */
+.ware-type-main    { background:#d1e7dd; color:#0f5132; }
+.ware-type-transit { background:#fff3cd; color:#856404; }
+.ware-type-return  { background:#f8d7da; color:#842029; }
+
+/* ─── صف تحت الحد الأدنى ─────────────────────────── */
+.row-below-min td {
+    background: #fffbf0 !important;
+    border-right: 3px solid #e67e22 !important;
+}
+
+/* ─── صف يحتوي على فرق في الجرد ─────────────────── */
+.row-diff td {
+    background: #fff5f5 !important;
+}
+
+/* ─── جداول المخزون ───────────────────────────────── */
+.inv-table .p-datatable-thead > tr > th {
+    background: #1B3A6B !important;
+    color: white !important;
+    font-size: 12.5px !important;
+    padding: 10px 14px !important;
+    text-align: right !important;
+    white-space: nowrap !important;
+}
+
+.inv-table .p-datatable-tbody > tr > td {
+    padding: 8px 14px !important;
+    font-size: 13px !important;
+    vertical-align: middle !important;
+}
+
+.inv-table .p-datatable-tbody > tr:hover {
+    background: #f0f4f8 !important;
+}
+
+.inv-table .p-datatable-tfoot > tr > td {
+    background: #e8f0fa !important;
+    font-weight: 800 !important;
+    border-top: 2px solid #1B3A6B !important;
+}
+
+/* ─── بطاقة المستودع ─────────────────────────────── */
+.ware-card {
+    transition: all 0.2s;
+    cursor: default;
+}
+.ware-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(27,58,107,0.12);
+}
+.ware-inactive {
+    opacity: 0.6;
+    filter: grayscale(30%);
+}
+
+/* ─── حقل إدخال الجرد ───────────────────────────── */
+.count-input input {
+    font-weight: 700 !important;
+    color: #0F6E56 !important;
+    background: #f0fff8 !important;
+    border: 1.5px solid #a3cfbb !important;
+    text-align: center !important;
+}
+.count-input input:focus {
+    border-color: #0F6E56 !important;
+    background: white !important;
+    box-shadow: 0 0 0 3px rgba(15,110,86,0.12) !important;
+}
