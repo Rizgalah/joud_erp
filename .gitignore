@@ -1,0 +1,278 @@
+# IDE and Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+*.iml
+*.sublime-project
+*.sublime-workspace
+.eclipse
+.classpath
+.project
+.settings/
+.c9/
+*.launch
+.factorypath
+
+# Build Output
+target/
+build/
+out/
+dist/
+*.class
+*.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+# Maven
+pom.xml.tag
+pom.xml.releaseBackup
+release.properties
+*.pom
+.mvn/
+mvnw
+mvnw.cmd
+.mvn/wrapper/maven-wrapper.jar
+.mvn/wrapper/maven-wrapper.properties
+
+# Gradle
+.gradle/
+build/
+gradle/
+gradlew
+gradlew.bat
+.gradletasknamecache
+
+# Node (if using frontend tools)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+
+# Compiled Files
+*.class
+*.jar
+*.war
+*.ear
+
+# Logging
+logs/
+*.log
+*.log.*
+log.txt
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+*.h2.db
+*.mdf
+*.ldf
+*.ibd
+
+# Environment Variables
+.env
+.env.local
+.env.*.local
+.env.production.local
+
+# Runtime Data
+pids/
+*.pid
+*.seed
+*.pid.lock
+lib-cov/
+.nyc_output/
+
+# Coverage Reports
+coverage/
+.coverage
+.coverage.*
+htmlcov/
+.pytest_cache/
+junit.xml
+cobertura.xml
+
+# Temporary Files
+tmp/
+temp/
+*.tmp
+*.bak
+*.backup
+
+# OS Specific
+Thumbs.db
+Desktop.ini
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+
+# Kubernetes / Docker
+.dockerignore
+Dockerfile
+docker-compose.yml
+k8s/
+
+# CI/CD
+.github/workflows/secrets/
+.gitlab-ci.yml.local
+.travis.yml.local
+
+# IntelliJ IDEA
+*.iml
+*.iws
+*.ipr
+.idea/
+*.jks
+*.keystore
+
+# Eclipse
+.classpath
+.project
+.c9/
+*.launch
+.settings/
+.factorypath
+
+# NetBeans
+nbproject/
+.nb-gradle/
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# SonarQube
+.sonarqube/
+.sonar/
+
+# Spotbugs
+.spotbugs/
+
+# Checkstyle
+checkstyle-cachefile
+
+# JetBrains IDEs
+.idea/
+*.iml
+*.iws
+*.ipr
+*.idea/
+
+# Linux
+.nfs*
+
+# Windows
+*.lnk
+$RECYCLE.BIN/
+
+# MacOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Gradle
+!gradle/wrapper/gradle-wrapper.jar
+
+# Maven Wrapper
+!.mvn/wrapper/maven-wrapper.jar
+!.mvn/wrapper/MavenWrapperDownloader.java
+
+# Selenium & Testing
+selenium-debug.log
+geckodriver.log
+
+# Application Specific
+config.local.xml
+config.local.properties
+application-local.yml
+application-local.yaml
+
+# Backup Files
+*.bak
+*.backup
+*.old
+*.orig
+*~
+
+# Compiled Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environments
+venv/
+ENV/
+env/
+.venv
+
+# Project Specific (Joud ERP)
+# Database backups
+db-backup/
+*.sql.backup
+
+# Generated files
+generated/
+generated-sources/
+
+# Local deployment
+tomcat-local/
+server-local/
+
+# Test Reports
+test-results/
+test-output/
+surefire-reports/
+failsafe-reports/
+
+# JavaDoc
+javadoc/
+*.javadoc
+
+# Plugin Cache
+.plugins/
+
+# Credentials and Secrets
+.credentials
+*.pem
+*.key
+*.crt
+
+# Large Files
+*.iso
+*.dmg
+*.exe
+*.msi
+
+# Archives (except necessary ones)
+!*.jar
+!*.war
+
+# Temp folders for different environments
+temp-dev/
+temp-test/
+temp-prod/
+
+# WebDriver
+chromedriver
+geckodriver
+msedgedriver
+
+# Spotless generated files
+.spotless.tmp/
+
+# Additional build artifacts
+*.orig
+*.patch
+.bumpversion.cfg
