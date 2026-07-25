@@ -27,11 +27,12 @@ GRANT ALL PRIVILEGES ON DATABASE joud_erp TO joud_user;
 -- 3. اتصل بالقاعدة ونفّذ ملفات SQL بالترتيب:
 \c joud_erp
 
-\i erp_database_schema_fixed.sql   -- 27 جدول
+\i audit_schema_PostgreSQL.sql   -- 27 جدول
 \i accounting_schema.sql           -- 6 جداول + 5 Views
 \i hr_schema.sql                   -- 9 جداول + 2 Views
 \i trade_schema.sql                -- 4 جداول + 3 Views
 \i inventory_schema.sql            -- 5 جداول + 3 Views
+\i query_use_for_schema_PostgreSQL.sql  --views for testing and development
 ```
 
 ---
@@ -143,11 +144,24 @@ bin\startup.bat       # Windows
 ```sql
 -- BCrypt hash لكلمة المرور "admin123" (cost=12)
 INSERT INTO users (user_i_id, user_c_name, password_c_hash, full_name,users_c_status,email)
-VALUES (1, 'SA',
+VALUES (1, 'sa',
   '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LwTqa6hG5B8DmHqe',
-  'مدير النظام', 'A','a.rizgalah@gmail.com');
+  'مدير النظام', 'A',[EMAIL_ADDRESS]');
+للاسف المكتبة 
+BCrypt hash
+لا تقبل تشفير من مكتبة اخرى غير تلك الموجودة فى التطبيق
+لذلك يجب عليك بعد ادخال الشفرة الموجودةاعلاه مرحليا عليك إستخدام ملف 
+joud-core\src\test\java\com\joud\core\security\service\AuthServiceTest.java
+عند استخدام برنامج الاختبار 
+AuthServiceTest.java
+سوف يولد لك شفرة  جديدة مطابقة للمكتبة المستخدمة فى التطبيق
+BCrypt hash 
+الملاحظة التالي عليك الانتباه ان قاعدة البيانات متأثرة بمفتاح العالى فى اسم المستخدم
+(SA=!sa)
+الحرف الكبير لا يساوى الحرف الصغير
+لذالك يرجى الانتباه عند كتابة اسم المستخدم
 
--- أنشئ دور المدير بكل الصلاحيات
+--أنشئ دور المدير بكل الصلاحيات
 INSERT INTO role (role_i_id, role_c_name, role_c_desc)
 VALUES (1, 'ADMIN', 'مدير النظام — كامل الصلاحيات');
 

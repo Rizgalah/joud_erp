@@ -1,224 +1,335 @@
 ﻿-- ============================================================
--- Joud ERP — joud-inventory Plugin Schema (PostgreSQL Version)
+-- joud erp — joud-inventory plugin schema
 -- ============================================================
 -- الجداول الموجودة مسبقاً (erp_database_schema_fixed.sql):
 --   warehouses, categories, units, products
 -- الجداول الموجودة من joud-trade:
---   STOCK_MOVEMENTS
--- التحسينات المضافة:
---   ALTER TABLE products   — حقول إضافية
---   ALTER TABLE warehouses — حقول إضافية
+--   stock_movements
 -- الجداول الجديدة:
---   STOCK_COUNT_MAST  — رأس جلسة الجرد
---   STOCK_COUNT_LINE  — أسطر الجرد
---   PRODUCT_BUNDLE    — مجموعات الأصناف (Bundle)
---   PRODUCT_BUNDLE_ITEM — محتويات المجموعة
---   REORDER_ALERT     — تنبيهات إعادة الطلب
+--   stock_count_mast  — رأس جلسة الجرد
+--   stock_count_line  — أسطر الجرد
+--   product_bundle    — مجموعات الأصناف (bundle)
+--   product_bundle_item — محتويات المجموعة
+--   reorder_alert     — تنبيهات إعادة الطلب
 -- ============================================================
 
 -- ============================================================
 -- 1. تحسين جدول products
 -- ============================================================
-ALTER TABLE products ADD (
+create table products (
+  prod_i_id bigint primary key,
+  --الرقم التعريفي الفريد للمنتج  
+  prod_c_code varchar(100) unique not null,
+
+  prod_c_name varchar(255) not null,
+  --اسم المنتج
+  categ_i_id bigint references categories(categ_i_id),
+  --الفئة الرئيسية
+  unit_i_id bigint references units(unit_i_id),
+  --الوحدة الأساسية
+  ware_i_id bigint references warehouses(ware_i_id),
+  --المستودع
+  supplier_id bigint references parties(parties_i_id),
+  --المورد
+  purchase_price numeric default 0,
+  --سعر الشراء
+  currency_i_id bigint references currency_mast(currency_i_id),
+  - -العملة 
+  sale_price numeric default 0,
+  --سعر البيع
+  opening_quantity numeric default 0,
+  --الكمية المفتوحة
+  current_quantity numeric default 0,
+  --الكمية الحالية
+  min_quantity numeric default 0,
+  --الحد الأدنى للطلب 
+  is_active smallint default 1,
+  --هل الصنف نشط؟
+  notes text,
+  --ملاحظات
+  created_at timestamp default current_timestamp,
+  --تاريخ الإنشاء
+  updated_at timestamp default current_timestamp,
+  --تاريخ التعديل
+  user_i_id bigint references users(user_i_id),
+  --المستخدم الذي أنشأ الصنف
   -- الباركود
-  prod_c_barcode     VARCHAR(100),
+  prod_c_barcode     varchar2(100),
   -- صورة الصنف
-  prod_c_image_path  VARCHAR(500),
+  prod_c_image_path  varchar2(500),
   -- الوصف التفصيلي
-  prod_c_description TEXT,
+  prod_c_description clob,
   -- هل يُتتبع المخزون؟
-  prod_c_track_stock VARCHAR(1)    DEFAULT 'Y',
+  prod_c_track_stock boolean default true,
   -- هل صنف خدمة (لا يحتاج مخزون)؟
-  prod_c_is_service  VARCHAR(1)    DEFAULT 'N',
-  -- الحد الأدنى للطلب (MOQ)
-  prod_f_moq         NUMERIC(23,5) DEFAULT 1,
+  prod_c_is_service  boolean default false,
+  -- الحد الأدنى للطلب (moq)
+  prod_f_moq         number(23,5)  default 1,
   -- وزن الصنف (للشحن)
-  prod_f_weight      NUMERIC(23,5) DEFAULT 0,
+  prod_f_weight      number(23,5)  default 0,
   -- تاريخ انتهاء الصلاحية
-  prod_d_expiry      DATE,
+  prod_d_expiry      date,
   -- وحدة القياس الثانية (مثلاً علبة / قطعة)
-  unit2_i_id         BIGINT        REFERENCES units(unit_i_id),
-  prod_f_conv_factor NUMERIC(23,5) DEFAULT 1, -- عامل التحويل بين الوحدتين
-  -- سعر التكلفة الحالي (FIFO / Average)
-  prod_f_avg_cost    NUMERIC(23,5) DEFAULT 0,
-  -- حالة الصنف: A=نشط, D=متوقف, O=منتهي
-  prod_c_status      VARCHAR(1)    DEFAULT 'A'
+  unit2_i_id         number(30)    references units(unit_i_id),
+  prod_f_conv_factor number(23,5)  default 1, -- عامل التحويل بين الوحدتين
+  -- سعر التكلفة الحالي (fifo / average)
+  prod_f_avg_cost    number(23,5)  default 0,
+  constraint check_prod_status check (prod_c_status in ('a', 'd', 'o')) 
+  -- حالة الصنف: a=نشط, d=متوقف, o=منتهي
+  prod_c_status      char(1)       default 'a'
 );
 
-CREATE INDEX idx_prod_barcode ON products(prod_c_barcode);
-CREATE INDEX idx_prod_status  ON products(prod_c_status, categ_i_id);
+create index idx_prod_barcode on products(prod_c_barcode);
+create index idx_prod_status  on products(prod_c_status, categ_i_id);
 
 -- ============================================================
 -- 2. تحسين جدول warehouses
 -- ============================================================
-ALTER TABLE warehouses ADD (
-  ware_c_type        VARCHAR(20)   DEFAULT 'main', -- main | transit | return
-  ware_c_location    VARCHAR(500),
-  ware_c_phone       VARCHAR(50),
-  ware_c_notes       VARCHAR(500),
-  ware_d_created     TIMESTAMP     DEFAULT CURRENT_TIMESTAMP
+create table warehouses (
+  ware_i_id bigint primary key,
+  --الرقم التعريفي الفريد للمستودع  
+  ware_c_code varchar(100) unique not null,
+  --رمز المستودع 
+  ware_c_name varchar(255) not null,
+  --اسم المستودع
+  ware_c_address varchar(500),
+  --عنوان المستودع
+  ware_c_manager varchar(255),
+  --مدير المستودع
+  is_active smallint default 1,
+  --هل المستودع نشط؟
+   ware_c_type        varchar2(20)  default 'main', constraint check_ware_type check (ware_c_type in ('main', 'transit', 'return'))-- main | transit | return
+   -- نوع المستودع
+  ware_c_location    varchar2(500), 
+  -- الموقع
+  ware_c_phone       varchar2(50),
+  -- الهاتف
+  ware_c_notes       varchar2(500),
+  -- الملاحظات
+  ware_d_created    timestamp default current_timestamp,
+  --تاريخ الإنشاء
+    user_i_id bigint references users(user_i_id)
+    --المستخدم الذي أنشأ المستودع
 );
 
+create table categories (
+  categ_i_id bigint primary key,
+  --الرقم التعريفي الفريد للفئة   
+  categ_c_name varchar(255) not null,
+  --اسم الفئة 
+  categ_c_type varchar(50) not null constraint check_categ_type check (categ_c_type in ('product', 'expense', 'income')),
+  -- 'product' | 'expense' | 'income'
+  parties_i_id bigint references parties(parties_i_id),
+  --الجهة المرتبطة
+  created_at timestamp default current_timestamp,
+  --تاريخ الإنشاء
+  user_i_id bigint references users(user_i_id)
+  --المستخدم الذي أنشأ الفئة
+);
+create table units (
+  unit_i_id bigint primary key,
+  --الرقم التعريفي الفريد للوحدة  
+  unit_c_name varchar(200) not null,
+  --اسم الوحدة 
+  unit_short_name varchar(50),
+  --رمز الوحدة 
+  created_at timestamp default current_timestamp,
+  --تاريخ الإنشاء
+  user_i_id bigint references users(user_i_id)
+  --المستخدم الذي أنشأ الوحدة
+);
 -- ============================================================
--- 3. STOCK_COUNT_MAST — رأس جلسة الجرد
+-- 3. stock_count_mast — رأس جلسة الجرد
 -- ============================================================
-CREATE TABLE STOCK_COUNT_MAST
+create table stock_count_mast
 (
-  COUNT_I_ID    BIGINT         PRIMARY KEY,
-  AGENT_I_ID    BIGINT         NOT NULL REFERENCES AGENT_MAST(AGENT_I_ID),
-  WARE_I_ID     BIGINT         REFERENCES warehouses(ware_i_id),
+  count_i_id    number(30)    primary key,
+  -- رقم الجرد
+  
+  agent_i_id    number(30)    not null references agent_mast(agent_i_id),
+  -- المستخدم المسؤول عن الجرد
+  ware_i_id     number(30)    references warehouses(ware_i_id),
+  -- المستودع
+  count_c_desc  varchar2(200) not null,
   -- وصف الجرد
-  COUNT_C_DESC  VARCHAR(200)   NOT NULL,
-  COUNT_D_DATE  TIMESTAMP      NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  -- الحالة: D=مسودة, I=جارٍ, C=مكتمل, P=معتمد
-  COUNT_C_STS   VARCHAR(1)     DEFAULT 'D',
-  -- نطاق الجرد: A=كل الأصناف, C=فئة, S=صنف محدد
-  COUNT_C_SCOPE VARCHAR(1)     DEFAULT 'A',
-  CATEG_I_ID    BIGINT         REFERENCES categories(categ_i_id),
+  count_d_date  date          not null default sysdate,
+   -- الحالة: d=مسودة, i=جارٍ, c=مكتمل, p=معتمد
+  count_c_sts   char(1)       default 'd' constraint check_count_sts check (count_c_sts in ('d', 'i', 'c', 'p')),
+  -- نطاق الجرد: a=كل الأصناف, c=فئة, s=صنف محدد
+  count_c_scope char(1)       default 'a' constraint check_count_scope check (count_c_scope in ('a', 'c', 's')),
+  categ_i_id    number(30)    references categories(categ_i_id),
   -- الفرق الإجمالي في القيمة
-  COUNT_F_DIFF_VAL NUMERIC(23,5) DEFAULT 0,
-  COUNT_I_ITEMS    INT           DEFAULT 0, -- عدد الأصناف
-  APPROVED_BY   BIGINT         REFERENCES users(user_i_id),
-  APPROVED_AT   TIMESTAMP,
-  CREATED_BY    BIGINT         REFERENCES users(user_i_id),
-  CREATED_AT    TIMESTAMP      DEFAULT CURRENT_TIMESTAMP
+  count_f_diff_val number(23,5) default 0,
+  -- الفرق بين المخزون الحقيقي والمخزون المسجل
+  count_i_items    number(10)   default 0,
+  -- عدد الأصناف التي تم الجرد عليها
+  approved_by   number(30)    references users(user_i_id),
+  -- المعتمد
+  approved_at   date,
+  -- تاريخ الاعتماد
+  created_by    number(30)    references users(user_i_id),
+  -- المنشئ
+  created_at    timestamp     default current_timestamp
+  -- تاريخ الإنشاء
 );
 
 -- ============================================================
--- 4. STOCK_COUNT_LINE — أسطر الجرد
+-- 4. stock_count_line — أسطر الجرد
 -- ============================================================
-CREATE TABLE STOCK_COUNT_LINE
+create table stock_count_line
 (
-  LINE_I_ID     BIGINT         PRIMARY KEY,
-  COUNT_I_ID    BIGINT         NOT NULL REFERENCES STOCK_COUNT_MAST(COUNT_I_ID) ON DELETE CASCADE,
-  PROD_I_ID     BIGINT         NOT NULL REFERENCES products(prod_i_id),
-  WARE_I_ID     BIGINT         REFERENCES warehouses(ware_i_id),
+  line_i_id     number(30)    primary key,
+  -- رقم السطر
+  count_i_id    number(30)    not null references stock_count_mast(count_i_id) on delete cascade,
+  -- رقم الجرد
+  prod_i_id     number(30)    not null references products(prod_i_id),
+  -- رقم الصنف
+  ware_i_id     number(30)    references warehouses(ware_i_id),
+  -- رقم المستودع
   -- الكمية النظامية (من قاعدة البيانات)
-  LINE_F_SYS_QTY   NUMERIC(23,5) DEFAULT 0,
+  line_f_sys_qty   number(23,5) default 0,
   -- الكمية الفعلية (المُعدَّة يدوياً)
-  LINE_F_ACTUAL_QTY NUMERIC(23,5) DEFAULT 0,
+  line_f_actual_qty number(23,5) default 0,
   -- الفرق = الفعلي - النظامي
-  LINE_F_DIFF_QTY  NUMERIC(23,5) DEFAULT 0,
+  line_f_diff_qty  number(23,5) default 0,
   -- تكلفة الوحدة (للحساب قيمة الفرق)
-  LINE_F_UNIT_COST NUMERIC(23,5) DEFAULT 0,
-  LINE_F_DIFF_VAL  NUMERIC(23,5) DEFAULT 0,
-  LINE_C_NOTES  VARCHAR(250),
-  COUNTED_BY    BIGINT         REFERENCES users(user_i_id),
-  COUNTED_AT    TIMESTAMP
+  line_f_unit_cost number(23,5) default 0,
+  -- تكلفة الوحدة
+  line_f_diff_val  number(23,5) default 0,
+  -- قيمة الفرق
+  line_c_notes  varchar2(250),    
+  -- ملاحظات
+  counted_by    number(30)    references users(user_i_id),
+  -- تاريخ الجرد
+  counted_at    timestamp
 );
 
-CREATE INDEX idx_scl_count ON STOCK_COUNT_LINE(COUNT_I_ID, PROD_I_ID);
+create index idx_scl_count on stock_count_line(count_i_id, prod_i_id);
 
 -- ============================================================
--- 5. PRODUCT_BUNDLE — مجموعات الأصناف
+-- 5. product_bundle — مجموعات الأصناف
 -- ============================================================
-CREATE TABLE PRODUCT_BUNDLE
+create table product_bundle
 (
-  BUNDLE_I_ID   BIGINT         PRIMARY KEY,
-  AGENT_I_ID    BIGINT         NOT NULL REFERENCES AGENT_MAST(AGENT_I_ID),
-  PROD_I_ID     BIGINT         NOT NULL REFERENCES products(prod_i_id), -- الصنف الأم
-  BUNDLE_C_DESC VARCHAR(200),
-  BUNDLE_C_STS  VARCHAR(1)     DEFAULT 'A',
-  CREATED_AT    TIMESTAMP      DEFAULT CURRENT_TIMESTAMP
+  bundle_i_id   number(30)    primary key,
+  -- رقم الباقة
+  agent_i_id    number(30)    not null references agent_mast(agent_i_id),
+  -- المستخدم المسؤول عن الباقة
+  prod_i_id     number(30)    not null references products(prod_i_id), -- الصنف الأم
+  bundle_c_desc varchar2(200), 
+  -- وصف الباقة
+  bundle_c_sts  boolean      default true,
+  -- الحالة: true=نشط, false=غير نشط
+  created_at    timestamp     default current_timestamp
+  -- تاريخ الإنشاء
 );
 
-CREATE TABLE PRODUCT_BUNDLE_ITEM
+create table product_bundle_item
 (
-  ITEM_I_ID     BIGINT         PRIMARY KEY,
-  BUNDLE_I_ID   BIGINT         NOT NULL REFERENCES PRODUCT_BUNDLE(BUNDLE_I_ID) ON DELETE CASCADE,
-  PROD_I_ID     BIGINT         NOT NULL REFERENCES products(prod_i_id),
-  ITEM_F_QTY    NUMERIC(23,5)  NOT NULL DEFAULT 1
+  item_i_id     number(30)    primary key,
+  -- رقم العنصر
+  bundle_i_id   number(30)    not null references product_bundle(bundle_i_id) on delete cascade,
+  -- رقم الباقة
+  prod_i_id     number(30)    not null references products(prod_i_id),
+  -- رقم الصنف
+  item_f_qty    number(23,5)  not null default 1
+  -- كمية الصنف
 );
 
 -- ============================================================
--- 6. REORDER_ALERT — تنبيهات إعادة الطلب
+-- 6. reorder_alert — تنبيهات إعادة الطلب
 -- ============================================================
-CREATE TABLE REORDER_ALERT
+create table reorder_alert
 (
-  ALERT_I_ID    BIGINT         PRIMARY KEY,
-  PROD_I_ID     BIGINT         NOT NULL REFERENCES products(prod_i_id),
-  WARE_I_ID     BIGINT         REFERENCES warehouses(ware_i_id),
-  AGENT_I_ID    BIGINT         NOT NULL REFERENCES AGENT_MAST(AGENT_I_ID),
+  alert_i_id    number(30)    primary key,
+  -- رقم التنبيه
+  prod_i_id     number(30)    not null references products(prod_i_id),
+  -- رقم الصنف
+  ware_i_id     number(30)    references warehouses(ware_i_id),
+  -- رقم المستودع
+  agent_i_id    number(30)    not null references agent_mast(agent_i_id),
+  -- المستخدم المسؤول عن التنبيه
+  alert_f_qty   number(23,5)  default 0,
   -- الكمية الحالية عند إنشاء التنبيه
-  ALERT_F_QTY   NUMERIC(23,5)  DEFAULT 0,
+  alert_f_min   number(23,5)  default 0,
   -- الكمية الدنيا المضبوطة
-  ALERT_F_MIN   NUMERIC(23,5)  DEFAULT 0,
-  -- الحالة: N=جديد, R=مراجعة, O=تم الطلب, C=مغلق
-  ALERT_C_STS   VARCHAR(1)     DEFAULT 'N',
-  CREATED_AT    TIMESTAMP      DEFAULT CURRENT_TIMESTAMP
+  alert_c_sts   char(1)       default 'n'constraint check_alert_sts check (alert_c_sts in ('n', 'r', 'o', 'c')),
+  ---- الحالة: n=جديد, r=مراجعة, o=تم الطلب, c=مغلق
+  created_at    timestamp     default current_timestamp
+  -- تاريخ الإنشاء
 );
 
 -- ============================================================
--- 7. Views تحليلية
+-- 7. views تحليلية
 -- ============================================================
 
 -- مستوى المخزون الحالي لكل صنف في كل مستودع
-CREATE OR REPLACE VIEW V_STOCK_LEVEL AS
-SELECT
+create or replace view v_stock_level as
+select
   p.prod_i_id,
   p.prod_c_code,
   p.prod_c_name,
   p.prod_c_status,
   c.categ_c_name,
   u.unit_c_name,
-  p.current_quantity   AS total_qty,
-  p.min_quantity       AS min_qty,
+  p.current_quantity   as total_qty,
+  p.min_quantity       as min_qty,
   p.prod_f_avg_cost,
-  p.current_quantity * p.prod_f_avg_cost AS stock_value,
+  p.current_quantity * p.prod_f_avg_cost as stock_value,
   p.purchase_price,
   p.sale_price,
-  p.WARE_I_ID          AS default_warehouse,
+  p.ware_i_id          as default_warehouse,
   -- هل تحت الحد الأدنى؟
-  CASE WHEN p.current_quantity <= p.min_quantity
-       THEN 'Y' ELSE 'N' END AS below_min,
-  p.AGENT_I_ID
-FROM products p
-LEFT JOIN categories c ON p.categ_i_id = c.categ_i_id
-LEFT JOIN units       u ON p.unit_i_id  = u.unit_i_id
-WHERE p.prod_c_status = 'A';
+  case when p.current_quantity <= p.min_quantity
+       then 'y' else 'n' end as below_min,
+  p.agent_i_id
+from products p
+left join categories c on p.categ_i_id = c.categ_i_id
+left join units       u on p.unit_i_id  = u.unit_i_id
+where p.prod_c_status = 'a';
 
 -- تقرير حركات المخزون مع اسم الصنف والمستودع
-CREATE OR REPLACE VIEW V_STOCK_MOVEMENTS_DETAIL AS
-SELECT
-  sm.MOVE_I_ID,
-  sm.AGENT_I_ID,
-  sm.MOVE_D_DATE,
-  sm.MOVE_C_TYPE,
+create or replace view v_stock_movements_detail as
+select
+  sm.move_i_id,
+  sm.agent_i_id,
+  sm.move_d_date,
+  sm.move_c_type,
   p.prod_c_code,
   p.prod_c_name,
   w.ware_c_name,
-  sm.MOVE_I_QTY,
-  sm.MOVE_F_QTY_BEFORE,
-  sm.MOVE_F_QTY_AFTER,
-  sm.MOVE_F_UNIT_COST,
-  sm.MOVE_I_QTY * sm.MOVE_F_UNIT_COST AS MOVE_F_VALUE,
+  sm.move_i_qty,
+  sm.move_f_qty_before,
+  sm.move_f_qty_after,
+  sm.move_f_unit_cost,
+  sm.move_i_qty * sm.move_f_unit_cost as move_f_value,
   i.invoice_number,
-  sm.MOVE_C_NOTES
-FROM STOCK_MOVEMENTS sm
-JOIN products   p ON sm.PROD_I_ID = p.prod_i_id
-LEFT JOIN warehouses w ON sm.WARE_I_ID = w.ware_i_id
-LEFT JOIN invoices   i ON sm.INVOICE_I_ID = i.invoice_i_id;
+  sm.move_c_notes
+from stock_movements sm
+join products   p on sm.prod_i_id = p.prod_i_id
+left join warehouses w on sm.ware_i_id = w.ware_i_id
+left join invoices   i on sm.invoice_i_id = i.invoice_i_id;
 
 -- تقرير قيمة المخزون الإجمالية
-CREATE OR REPLACE VIEW V_STOCK_VALUE AS
-SELECT
-  p.AGENT_I_ID,
+create or replace view v_stock_value as
+select
+  p.agent_i_id,
   c.categ_c_name,
   c.categ_i_id,
-  COUNT(*)                                       AS PROD_COUNT,
-  SUM(p.current_quantity)                        AS TOTAL_QTY,
-  SUM(p.current_quantity * p.prod_f_avg_cost)    AS TOTAL_VALUE,
-  SUM(p.current_quantity * p.purchase_price)     AS TOTAL_COST,
-  SUM(p.current_quantity * p.sale_price)         AS TOTAL_SALE_VALUE
-FROM products p
-LEFT JOIN categories c ON p.categ_i_id = c.categ_i_id
-WHERE p.prod_c_status = 'A'
-  AND p.prod_c_track_stock = 'Y'
-GROUP BY p.AGENT_I_ID, c.categ_i_id, c.categ_c_name;
+  count(*)                                       as prod_count,
+  sum(p.current_quantity)                        as total_qty,
+  sum(p.current_quantity * p.prod_f_avg_cost)    as total_value,
+  sum(p.current_quantity * p.purchase_price)     as total_cost,
+  sum(p.current_quantity * p.sale_price)         as total_sale_value
+from products p
+left join categories c on p.categ_i_id = c.categ_i_id
+where p.prod_c_status = 'a'
+  and p.prod_c_track_stock = 'y'
+group by p.agent_i_id, c.categ_i_id, c.categ_c_name;
 
 -- ============================================================
--- END OF INVENTORY SCHEMA
+-- end of inventory schema
 -- جداول جديدة: 5
--- ALTER: products + warehouses
--- Views: 3
+-- alter: products + warehouses
+-- views: 3
 -- ============================================================

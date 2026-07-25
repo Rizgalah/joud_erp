@@ -83,11 +83,6 @@ public class AuthService {
             if (user.isLocked()) {
                 return new LoginOutcome(LoginResult.ACCOUNT_LOCKED, null, "الحساب مقفل مؤقتاً. تواصل مع المسؤول.");
             }
-            System.out.println("👉 PASSWORD FROM UI: " + password);
-            System.out.println("👉 HASH FROM DB: [" + user.getPasswordHash() + "] LENGTH: "
-                    + (user.getPasswordHash() != null ? user.getPasswordHash().length() : 0));
-            // 🔥 أضف هذا السطر المؤقت هنا:
-            System.out.println("🔥 GENERATED VALID HASH: " + com.joud.core.security.util.PasswordUtil.hash("admin123"));
             // 5. تحقق من كلمة المرور
             if (!PasswordUtil.verify(password, user.getPasswordHash().trim())) {
                 handleFailedAttempt(user, clientIp);
@@ -139,6 +134,11 @@ public class AuthService {
 
         }
 
+        System.out.println("👉 PASSWORD FROM UI: " + password);
+        System.out.println("👉 HASH FROM DB: [" + user.getPasswordHash() + "] LENGTH: "
+                + (user.getPasswordHash() != null ? user.getPasswordHash().length() : 0));
+        // 🔥 أضف هذا السطر المؤقت هنا:
+        System.out.println("🔥 GENERATED VALID HASH: " + com.joud.core.security.util.PasswordUtil.hash("admin123"));
         // 5. تحقق من كلمة المرور
         if (!PasswordUtil.verify(password, user.getPasswordHash().trim())) {
             return LoginResult.INVALID_CREDENTIALS;

@@ -43,7 +43,8 @@ public class UserService {
     @Transactional
     public void changePassword(Long userId, String newPlainPassword) {
         User user = em.find(User.class, userId);
-        if (user == null) throw new IllegalArgumentException("User not found: " + userId);
+        if (user == null)
+            throw new IllegalArgumentException("User not found: " + userId);
         user.setPasswordHash(PasswordUtil.hash(newPlainPassword));
         user.setFailedAttempts(0);
         user.setStatus("A");
@@ -56,7 +57,8 @@ public class UserService {
     public void assignRole(Long userId, Long roleId) {
         User user = em.find(User.class, userId);
         Role role = em.find(Role.class, roleId);
-        if (user == null || role == null) return;
+        if (user == null || role == null)
+            return;
         user.getRoles().add(role);
         em.merge(user);
     }
@@ -66,7 +68,10 @@ public class UserService {
     @Transactional
     public void lockUser(Long userId) {
         User user = em.find(User.class, userId);
-        if (user != null) { user.setStatus("L"); em.merge(user); }
+        if (user != null) {
+            user.setStatus("L");
+            em.merge(user);
+        }
     }
 
     @Transactional
@@ -88,13 +93,13 @@ public class UserService {
 
     public List<User> findByAgent(Long agentId) {
         return em.createQuery(
-            "SELECT u FROM User u WHERE u.agentId = :agentId ORDER BY u.username",
-            User.class).setParameter("agentId", agentId).getResultList();
+                "SELECT u FROM User u WHERE u.agentId = :agentId ORDER BY u.username",
+                User.class).setParameter("agentId", agentId).getResultList();
     }
 
     public List<User> findAll() {
         return em.createQuery("SELECT u FROM User u ORDER BY u.username", User.class)
-                 .getResultList();
+                .getResultList();
     }
 
     // ─── الأدوار ─────────────────────────────────────
@@ -111,7 +116,7 @@ public class UserService {
 
     public List<Role> findAllRoles() {
         return em.createQuery("SELECT r FROM Role r ORDER BY r.name", Role.class)
-                 .getResultList();
+                .getResultList();
     }
 
     // ─── Private ────────────────────────────────────
@@ -119,8 +124,8 @@ public class UserService {
     private Long generateId() {
         try {
             return em.createQuery(
-                "SELECT k.generatedId FROM KeyGeneration k WHERE k.tableName = 'users'",
-                Long.class).getSingleResult();
+                    "SELECT k.next_val FROM joud_sequence_registry k WHERE k.seq_name = 'users'",
+                    Long.class).getSingleResult();
         } catch (Exception e) {
             return System.currentTimeMillis();
         }
@@ -129,8 +134,8 @@ public class UserService {
     private Long generateRoleId() {
         try {
             return em.createQuery(
-                "SELECT k.generatedId FROM KeyGeneration k WHERE k.tableName = 'role'",
-                Long.class).getSingleResult();
+                    "SELECT k.next_val FROM joud_sequence_registry k WHERE k.seq_name = 'role'",
+                    Long.class).getSingleResult();
         } catch (Exception e) {
             return System.currentTimeMillis();
         }
