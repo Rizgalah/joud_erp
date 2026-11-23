@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+    PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:h="jakarta.faces.html" xmlns:f="jakarta.faces.core">
+<h:head>
+    <title>شاشة الحسابات المساعدة - subldg_mast</title>
+    <style>
+        .form-grid {
+            margin-bottom: 20px;
+            border: 1px solid #ccc;
+            padding: 15px;
+            background: #f9f9f9;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .data-table th,
+        .data-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: right;
+        }
+
+        .data-table th {
+            background-color: #f2f2f2;
+        }
+
+        .btn {
+            margin-right: 5px;
+            padding: 5px 10px;
+        }
+    </style>
+</h:head>
+<h:body dir="rtl">
+    <h2>إدارة الحسابات المساعدة (Subsidiary Ledger)</h2>
+
+    <h:form id="mainForm">
+        <!-- فورم الإدخال والتعديل -->
+        <div class="form-grid">
+            <h:panelGrid columns="4" cellpadding="8">
+                <h:outputLabel value="الحساب الرئيسي (ID):" />
+                <h:inputText value="#{subldgMastController.subldg.ldgId}" />
+
+                <h:outputLabel value="اسم الحساب المساعد:" />
+                <h:inputText value="#{subldgMastController.subldg.subLdgDesc}" required="true" />
+
+                <h:outputLabel value="نوع الحساب:" />
+                <h:inputText value="#{subldgMastController.subldg.subType}" required="true" maxlength="1" />
+
+                <h:outputLabel value="مؤشر التحقق (Revalid):" />
+                <h:inputText value="#{subldgMastController.subldg.subRevalid}" required="true" maxlength="1" />
+
+                <h:outputLabel value="مجموعة الدفتر (Group ID):" />
+                <h:inputText value="#{subldgMastController.subldg.groupId}" />
+
+                <h:outputLabel value="نوع الحركة (Act Type):" />
+                <h:inputText value="#{subldgMastController.subldg.actType}" required="true" />
+
+                <h:outputLabel value="حساب الأرباح (Profit Calc):" />
+                <h:inputText value="#{subldgMastController.subldg.profitCalc}" maxlength="1" />
+
+                <h:outputLabel value="فئة الحساب (Class):" />
+                <h:inputText value="#{subldgMastController.subldg.actClass}" />
+
+                <h:outputLabel value="طبيعة الحساب (Nature):" />
+                <h:inputText value="#{subldgMastController.subldg.actNature}" />
+
+                <h:outputLabel value="مؤشر الموازنة (Budget Flag):" />
+                <h:inputText value="#{subldgMastController.subldg.budFlag}" maxlength="1" />
+
+                <h:outputLabel value="المستخدم (User ID):" />
+                <h:inputText value="#{subldgMastController.subldg.userId}" />
+            </h:panelGrid>
+
+            <div style="margin-top: 15px;">
+                <h:commandButton value="حفظ الحساب" action="#{subldgMastController.save}" class="btn">
+                    <f:ajax execute="@form" render="@form" />
+                </h:commandButton>
+                <h:commandButton value="جديد / تصفية" action="#{subldgMastController.clear}" class="btn">
+                    <f:ajax render="@form" />
+                </h:commandButton>
+            </div>
+        </div>
+
+        <!-- جدول استعراض البيانات -->
+        <h:dataTable value="#{subldgMastController.subldgList}" var="item" class="data-table">
+            <h:column>
+                <f:facet name="header">الرقم الفريد</f:facet>
+                #{item.subId}
+            </h:column>
+            <h:column>
+                <f:facet name="header">اسم الحساب المساعد</f:facet>
+                #{item.subLdgDesc}
+            </h:column>
+            <h:column>
+                <f:facet name="header">النوع</f:facet>
+                #{item.subType}
+            </h:column>
+            <h:column>
+                <f:facet name="header">المجموعة</f:facet>
+                #{item.groupId}
+            </h:column>
+            <h:column>
+                <f:facet name="header">طبيعة الحساب</f:facet>
+                #{item.actNature}
+            </h:column>
+            <h:column>
+                <f:facet name="header">عمليات التحكم</f:facet>
+                <h:commandButton value="#{msg['btn.edit']}" action="#{subldgMastController.selectForEdit(item)}" class="btn">
+                    <f:ajax render="@form" />
+                </h:commandButton>
+                <h:commandButton value="#{msg['btn.delete']}" action="#{subldgMastController.delete(item)}" class="btn"
+                    onclick="return confirm('هل أنت متأكد من حذف هذا الحساب؟');">
+                    <f:ajax render="@form" />
+                </h:commandButton>
+            </h:column>
+        </h:dataTable>
+    </h:form>
+</h:body>
+
+</html>

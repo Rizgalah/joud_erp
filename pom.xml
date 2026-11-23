@@ -5,152 +5,209 @@
                              https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <!-- ═══════════════════════════════════════════
-         معلومات المشروع
-    ═══════════════════════════════════════════ -->
+    <!-- ════════════════════════════════════════════════════════════
+         Joud ERP — Parent Multi-Module Project
+         يُبنى بالأمر: mvn clean package -pl joud-app -am
+         الناتج: joud-app/target/joud-erp.war
+    ════════════════════════════════════════════════════════════ -->
     <groupId>com.joud</groupId>
-    <artifactId>joud-core</artifactId>
+    <artifactId>joud-erp-parent</artifactId>
     <version>1.0.0</version>
-    <packaging>war</packaging>
+    <packaging>pom</packaging>
 
-    <name>Joud Core Shell</name>
-    <description>القلب الثابت — واجهة القابس، الأمان، ماكنة التقارير</description>
+    <name>Joud ERP — Parent</name>
+    <description>مشروع Joud ERP متعدد الوحدات — يجمع كل الوحدات ويبنيها بالترتيب الصحيح</description>
 
-    <!-- ═══════════════════════════════════════════
-         إعدادات Java 21
-    ═══════════════════════════════════════════ -->
+    <!-- ترتيب البناء: يحترم الاعتماديات بين الوحدات -->
+    <modules>
+        <module>joud-core</module>
+        <module>joud-accounting</module>
+        <module>joud-hr</module>
+        <module>joud-trade</module>
+        <module>joud-inventory</module>
+        <module>joud-dashboard</module>
+        <module>joud-notification</module>
+        <module>joud-app</module>
+    </modules>
+
     <properties>
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
-        <!-- إصدارات المكتبات -->
+        <!-- إصدارات مشتركة بين جميع الوحدات -->
         <jakarta.version>10.0.0</jakarta.version>
         <hibernate.version>6.4.4.Final</hibernate.version>
         <postgresql.version>42.7.3</postgresql.version>
+        <primefaces.version>13.0.0</primefaces.version>
         <jasper.version>6.21.0</jasper.version>
         <poi.version>5.2.5</poi.version>
         <bcrypt.version>0.10.2</bcrypt.version>
         <junit.version>5.10.2</junit.version>
+        <mockito.version>5.11.0</mockito.version>
+        <lombok.version>1.18.32</lombok.version>
+        <!-- Byte Buddy: مطلوب لدعم Java 23 مع Mockito -->
+        <byte-buddy.version>1.15.10</byte-buddy.version>
     </properties>
 
-    <dependencies>
+    <!-- ════════════════════════════════════════════════════════════
+         Dependency Management — تُوحَّد الإصدارات هنا
+         الوحدات الفرعية تُعلن عن الاعتماديات بدون <version>
+    ════════════════════════════════════════════════════════════ -->
+    <dependencyManagement>
+        <dependencies>
 
-        <!-- ─── Jakarta EE 10 (مقدم من Tomcat/Server) ─── -->
-        <dependency>
-            <groupId>jakarta.platform</groupId>
-            <artifactId>jakarta.jakartaee-api</artifactId>
-            <version>${jakarta.version}</version>
-            <!-- provided: الـ Server يوفرها، لا نضمها في الـ jar -->
-            <scope>provided</scope>
-        </dependency>
+            <!-- Jakarta EE 10 -->
+           <dependency>
+    <groupId>org.glassfish</groupId>
+    <artifactId>jakarta.faces</artifactId>
+    <version>4.0.5</version>
+</dependency>
 
-        <!-- ─── Hibernate ORM (JPA Implementation) ─── -->
-        <dependency>
-            <groupId>org.hibernate.orm</groupId>
-            <artifactId>hibernate-core</artifactId>
-            <version>${hibernate.version}</version>
-            <scope>provided</scope>
-        </dependency>
+            <!-- Hibernate ORM -->
+            <dependency>
+                <groupId>org.hibernate.orm</groupId>
+                <artifactId>hibernate-core</artifactId>
+                <version>${hibernate.version}</version>
+            </dependency>
 
-        <!-- ─── PostgreSQL Driver ─── -->
-        <dependency>
-            <groupId>org.postgresql</groupId>
-            <artifactId>postgresql</artifactId>
-            <version>${postgresql.version}</version>
-        </dependency>
+            <!-- PostgreSQL -->
+            <dependency>
+                <groupId>org.postgresql</groupId>
+                <artifactId>postgresql</artifactId>
+                <version>${postgresql.version}</version>
+            </dependency>
 
-        <!-- ─── JasperReports (ماكنة التقارير) ─── -->
-        <dependency>
-            <groupId>net.sf.jasperreports</groupId>
-            <artifactId>jasperreports</artifactId>
-            <version>${jasper.version}</version>
-        </dependency>
+            <!-- PrimeFaces -->
+            <dependency>
+                <groupId>org.primefaces</groupId>
+                <artifactId>primefaces</artifactId>
+                <version>${primefaces.version}</version>
+                <classifier>jakarta</classifier>
+            </dependency>
 
-        <!-- ─── Apache POI (تصدير Excel) ─── -->
-        <dependency>
-            <groupId>org.apache.poi</groupId>
-            <artifactId>poi-ooxml</artifactId>
-            <version>${poi.version}</version>
-        </dependency>
+            <!-- JasperReports -->
+            <dependency>
+                <groupId>net.sf.jasperreports</groupId>
+                <artifactId>jasperreports</artifactId>
+                <version>${jasper.version}</version>
+            </dependency>
 
-        <!-- ─── BCrypt (تشفير كلمات المرور) ─── -->
-        <dependency>
-            <groupId>at.favre.lib</groupId>
-            <artifactId>bcrypt</artifactId>
-            <version>${bcrypt.version}</version>
-        </dependency>
+            <!-- Apache POI -->
+            <dependency>
+                <groupId>org.apache.poi</groupId>
+                <artifactId>poi-ooxml</artifactId>
+                <version>${poi.version}</version>
+            </dependency>
 
-        <!-- ─── JUnit 5 (اختبارات) ─── -->
+            <!-- BCrypt -->
+            <dependency>
+                <groupId>at.favre.lib</groupId>
+                <artifactId>bcrypt</artifactId>
+                <version>${bcrypt.version}</version>
+            </dependency>
+
+            <!-- Lombok -->
+            <dependency>
+                <groupId>org.projectlombok</groupId>
+                <artifactId>lombok</artifactId>
+                <version>${lombok.version}</version>
+                <scope>provided</scope>
+            </dependency>
+
+            <!-- JUnit 5 -->
+            <dependency>
+                <groupId>org.junit.jupiter</groupId>
+                <artifactId>junit-jupiter</artifactId>
+                <version>${junit.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <!-- Byte Buddy: يفرض إصداراً يدعم Java 23 على كل الوحدات -->
+            <dependency>
+                <groupId>net.bytebuddy</groupId>
+                <artifactId>byte-buddy</artifactId>
+                <version>${byte-buddy.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.bytebuddy</groupId>
+                <artifactId>byte-buddy-agent</artifactId>
+                <version>${byte-buddy.version}</version>
+            </dependency>
+            <!-- Mockito لعمل الـ Mocking في بيئة JUnit 5 -->
         <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter</artifactId>
-            <version>${junit.version}</version>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-junit-jupiter</artifactId>
+            <version>${mockito.version}</version>
             <scope>test</scope>
         </dependency>
+<!-- Jersey API -->
+   <dependency>
+    <groupId>org.glassfish.jersey.containers</groupId>
+    <artifactId>jersey-container-servlet</artifactId>
+    <version>3.1.5</version>
+</dependency>
 
-        <!-- ─── SLF4J & Logback (Logger) ─── -->
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
-            <version>2.0.12</version>
-        </dependency>
-        <dependency>
-            <groupId>ch.qos.logback</groupId>
-            <artifactId>logback-classic</artifactId>
-            <version>1.5.3</version>
-        </dependency>
+<dependency>
+    <groupId>org.glassfish.jersey.inject</groupId>
+    <artifactId>jersey-hk2</artifactId>
+    <version>3.1.5</version>
+</dependency>
 
-    </dependencies>
+<!-- اختيارياً: لدعم معالجة وإرجاع بيانات JSON/Text بسلاسة -->
+<dependency>
+    <groupId>org.glassfish.jersey.media</groupId>
+    <artifactId>jersey-media-json-jackson</artifactId>
+    <version>3.1.5</version>
+</dependency>
 
-    <!-- ═══════════════════════════════════════════
-         إعدادات البناء
-    ═══════════════════════════════════════════ -->
+<dependency>
+    <groupId>org.glassfish.jersey.ext.cdi</groupId>
+    <artifactId>jersey-cdi1x</artifactId>
+    <version>3.1.5</version>
+</dependency>
+
+        </dependencies>
+    </dependencyManagement>
+
     <build>
-        <!-- اسم الملف النهائي لدعم النشر المتوازي في Tomcat (Parallel Deployment) -->
-        <finalName>joud##${project.version}</finalName>
-        <plugins>
-            <!-- تجميع الكود -->
+        <pluginManagement>
+            <plugins>
             <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.13.0</version>
-                <configuration>
-                    <release>21</release>
-                    <encoding>UTF-8</encoding>
-                </configuration>
-            </plugin>
+    <groupId>org.apache.maven.plugins</groupId>
+    <artifactId>maven-clean-plugin</artifactId>
+    <version>3.2.0</version>
+    <configuration>
+        <filesets>
+            <fileset>
+                <directory>${project.basedir}</directory>
+                <includes>
+                    <include>**/*.log</include> <include>**/.tmp/**</include> <include>**/thumbs.db</include> </includes>
+                <followSymlinks>false</followSymlinks>
+            </fileset>
+        </filesets>
+    </configuration>
+</plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>3.13.0</version>
+                    <configuration>
+                        <release>21</release>
+                        <encoding>UTF-8</encoding>
+                    </configuration>
+                </plugin>
 
-            <!-- تشغيل الاختبارات -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-surefire-plugin</artifactId>
-                <version>3.2.5</version>
-            </plugin>
+                <!-- مطلوب لتشغيل JUnit 5 — الإصدار القديم (2.x) لا يتعرف عليه -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                    <version>3.2.5</version>
+                </plugin>
+                
 
-            <!-- بناء jar مع المصادر للوحدات الأخرى -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-source-plugin</artifactId>
-                <version>3.3.1</version>
-                <executions>
-                    <execution>
-                        <id>attach-sources</id>
-                        <goals><goal>jar</goal></goals>
-                    </execution>
-                </executions>
-            </plugin>
-
-            <!-- بناء ملف WAR للنشر على Tomcat -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-war-plugin</artifactId>
-                <version>3.4.0</version>
-                <configuration>
-                    <failOnMissingWebXml>false</failOnMissingWebXml>
-                </configuration>
-            </plugin>
-        </plugins>
+            </plugins>
+        
+        </pluginManagement>
     </build>
 
 </project>

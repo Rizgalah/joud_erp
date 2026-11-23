@@ -1,0 +1,253 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="jakarta.faces.html"
+      xmlns:f="jakarta.faces.core"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:ui="jakarta.faces.facelets"
+      lang="ar" dir="rtl">
+
+<ui:composition template="/WEB-INF/template.xhtml">
+<ui:define name="pageTitle">#{msg['trade.payments.title']}</ui:define>
+
+<ui:define name="extraStyles">
+    <h:outputStylesheet library="css" name="trade.css"/>
+</ui:define>
+
+<ui:define name="content">
+<h:form id="payForm">
+<p:growl id="msgs" life="4000" showDetail="true"/>
+
+<div style="display:grid;grid-template-columns:380px 1fr;gap:16px">
+
+    <!-- ══════════════════════════════════════════
+         يمين: نموذج الدفعة
+    ══════════════════════════════════════════ -->
+    <div>
+
+        <!-- نوع العملية -->
+        <div class="joud-card" style="margin-bottom:14px">
+            <div style="display:flex;gap:4px;background:#f0f4f8;
+                        padding:5px;border-radius:10px;margin-bottom:14px">
+                <p:commandButton value="مقبوضة" icon="pi pi-arrow-down"
+                    styleClass="#{payBean.payType=='receipt'?'p-button-success':'p-button-text p-button-plain'}"
+                    action="#{payBean.setPayType('receipt')}"
+                    update="payForm" ajax="true"/>
+                <p:commandButton value="مدفوعة" icon="pi pi-arrow-up"
+                    styleClass="#{payBean.payType=='payment'?'p-button-warning':'p-button-text p-button-plain'}"
+                    action="#{payBean.setPayType('payment')}"
+                    update="payForm" ajax="true"/>
+            </div>
+
+            <!-- اختيار الطرف -->
+            <div style="margin-bottom:12px">
+                <label class="trade-label">
+                    #{payBean.payType=='receipt'?'العميل':'المورد'}
+                </label>
+                <p:selectOneMenu value="#{payBean.partyId}" style="width:100%"
+                                 filter="true">
+                    <f:selectItem itemLabel="— اختر —" itemValue="#{null}"/>
+                    <f:selectItems value="#{payBean.parties}"
+                                   var="p" itemValue="#{p[0]}" itemLabel="#{p[1]}"/>
+                    <p:ajax event="change"
+                            listener="#{payBean.loadUnpaid}"
+                            update="payForm:unpaidTable"/>
+                </p:selectOneMenu>
+            </div>
+
+            <!-- اختيار الفاتورة -->
+            <div style="margin-bottom:12px">
+                <label class="trade-label">الفاتورة (اختياري)</label>
+                <p:selectOneMenu value="#{payBean.invoiceId}" style="width:100%">
+                    <f:selectItem itemLabel="— دفعة عامة بدون فاتورة —" itemValue="#{null}"/>
+                    <f:selectItems value="#{payBean.unpaidInvoices}"
+                                   var="inv" itemValue="#{inv[0]}"
+                                   itemLabel="#{inv[1]} — #{inv[2]}"/>
+                    <p:ajax event="change"
+                            listener="#{payBean.onInvoiceSelect}"
+                            update="payForm:balancePanel payForm:amountFld"/>
+                </p:selectOneMenu>
+            </div>
+
+            <!-- رصيد الفاتورة -->
+            <div id="balancePanel" style="margin-bottom:12px">
+                <ui:fragment rendered="#{payBean.invoiceBalance.compareTo(payBean.invoiceBalance.ZERO) > 0}">
+                    <div style="background:#fff3cd;border-radius:8px;padding:10px;
+                                border-right:4px solid #ffc107;font-size:13px">
+                        <span>الرصيد المتبقي: </span>
+                        <strong style="color:#856404;direction:ltr;display:inline-block">
+                            <h:outputText value="#{payBean.invoiceBalance}">
+                                <f:convertNumber pattern="#,##0.00"/>
+                            </h:outputText>
+                        </strong>
+                    </div>
+                </ui:fragment>
+            </div>
+
+            <!-- المبلغ -->
+            <div style="margin-bottom:12px">
+                <label class="trade-label">المبلغ *</label>
+                <p:inputNumber id="amountFld" value="#{payBean.amount}"
+                               decimalPlaces="2" style="width:100%"
+                               placeholder="0.00"/>
+            </div>
+
+            <!-- العملة -->
+            <div style="margin-bottom:12px">
+                <label class="trade-label">العملة</label>
+                <p:selectOneMenu value="#{payBean.currencyId}" style="width:100%">
+                    <f:selectItem itemLabel="— اختر العملة —" itemValue="#{null}"/>
+                    <f:selectItems value="#{payBean.currencies}"
+                                   var="c" itemValue="#{c[0]}"
+                                   itemLabel="#{c[2]} — #{c[1]}"/>
+                </p:selectOneMenu>
+            </div>
+
+            <!-- طريقة الدفع -->
+            <div style="margin-bottom:12px">
+                <label class="trade-label">طريقة الدفع</label>
+                <p:selectOneMenu value="#{payBean.method}" style="width:100%">
+                    <f:selectItem itemLabel="نقدي"       itemValue="cash"/>
+                    <f:selectItem itemLabel="بنك"        itemValue="bank"/>
+                    <f:selectItem itemLabel="شيك"        itemValue="cheque"/>
+                    <f:selectItem itemLabel="تحويل"      itemValue="transfer"/>
+                </p:selectOneMenu>
+            </div>
+
+            <!-- رقم مرجعي -->
+            <div style="margin-bottom:16px">
+                <label class="trade-label">رقم مرجعي / شيك</label>
+                <p:inputText value="#{payBean.reference}" style="width:100%"
+                             placeholder="رقم الشيك أو مرجع التحويل..."/>
+            </div>
+
+            <p:commandButton
+                value="#{payBean.payType=='receipt'?'تسجيل مقبوضة':'تسجيل مدفوعة'}"
+                icon="#{payBean.payType=='receipt'?'pi pi-arrow-down':'pi pi-arrow-up'}"
+                styleClass="#{payBean.payType=='receipt'?'p-button-success':'p-button-warning'}"
+                style="width:100%"
+                action="#{payBean.record}"
+                update="payForm:msgs payForm:unpaidTable payForm:histTable"
+                ajax="true"/>
+
+        </div>
+
+    </div>
+
+    <!-- ══════════════════════════════════════════
+         يسار: الفواتير والسجل
+    ══════════════════════════════════════════ -->
+    <div>
+
+        <!-- فواتير غير مسددة -->
+        <div class="joud-card" style="margin-bottom:14px">
+            <div class="joud-card-header">
+                <span class="joud-card-title">
+                    <i class="pi pi-clock" style="margin-left:8px;color:#e67e22"/>
+                    فواتير غير مسددة
+                </span>
+                <p:commandButton icon="pi pi-refresh" title="تحديث"
+                    styleClass="p-button-text p-button-sm"
+                    action="#{payBean.loadUnpaid}"
+                    update="payForm:unpaidTable"/>
+            </div>
+
+            <p:dataTable id="unpaidTable" value="#{payBean.unpaidInvoices}" var="row"
+                         styleClass="trade-table" rows="10" paginator="true"
+                         emptyMessage="لا توجد فواتير آجلة">
+
+                <p:column headerText="الفاتورة" style="width:120px;font-weight:700;color:#2E75B6">
+                    <h:outputText value="#{row[1]}"/>
+                </p:column>
+                <p:column headerText="#{msg['trade.payment.party']}">
+                    <h:outputText value="#{row[2]}"/>
+                </p:column>
+                <p:column headerText="#{msg['accounting.statement.date.from']}" style="width:105px">
+                    <h:outputText value="#{row[3]}">
+                        <f:convertDateTime pattern="dd/MM/yyyy"/>
+                    </h:outputText>
+                </p:column>
+                <p:column headerText="#{msg['trade.invoice.total']}" style="width:115px;direction:ltr;text-align:left">
+                    <h:outputText value="#{row[4]}">
+                        <f:convertNumber pattern="#,##0.00"/>
+                    </h:outputText>
+                </p:column>
+                <p:column headerText="المدفوع" style="width:110px;direction:ltr;text-align:left">
+                    <span style="color:#0F6E56">
+                        <h:outputText value="#{row[5]}">
+                            <f:convertNumber pattern="#,##0.00"/>
+                        </h:outputText>
+                    </span>
+                </p:column>
+                <p:column headerText="الرصيد" style="width:115px;direction:ltr;text-align:left">
+                    <span style="color:#e74c3c;font-weight:800">
+                        <h:outputText value="#{row[6]}">
+                            <f:convertNumber pattern="#,##0.00"/>
+                        </h:outputText>
+                    </span>
+                </p:column>
+
+            </p:dataTable>
+        </div>
+
+        <!-- سجل الدفعات -->
+        <div class="joud-card">
+            <div class="joud-card-header">
+                <span class="joud-card-title">
+                    <i class="pi pi-list" style="margin-left:8px;color:#2E75B6"/>
+                    سجل الدفعات
+                </span>
+                <div style="display:flex;gap:8px;align-items:center">
+                    <p:datePicker value="#{payBean.dateFrom}" pattern="dd/MM/yyyy"
+                                  style="width:120px"/>
+                    <span style="color:#888">—</span>
+                    <p:datePicker value="#{payBean.dateTo}" pattern="dd/MM/yyyy"
+                                  style="width:120px"/>
+                    <p:commandButton icon="pi pi-search"
+                        styleClass="p-button-outlined p-button-sm"
+                        action="#{payBean.loadHistory}"
+                        update="payForm:histTable"/>
+                </div>
+            </div>
+
+            <p:dataTable id="histTable" value="#{payBean.paymentHistory}" var="pay"
+                         styleClass="trade-table" rows="15" paginator="true"
+                         emptyMessage="لا توجد دفعات في هذه الفترة">
+
+                <p:column headerText="#{msg['accounting.statement.date.from']}" style="width:110px">
+                    <h:outputText value="#{pay.paymentDate}">
+                        <f:convertDateTime pattern="dd/MM/yyyy"/>
+                    </h:outputText>
+                </p:column>
+                <p:column headerText="النوع" style="width:90px;text-align:center">
+                    <span class="trade-badge"
+                          style="background:#{pay.type.toString()=='receipt'?'#d1e7dd':'#fff3cd'};
+                                 color:#{pay.type.toString()=='receipt'?'#0f5132':'#856404'}">
+                        #{pay.type.toString()=='receipt'?'مقبوضة':'مدفوعة'}
+                    </span>
+                </p:column>
+                <p:column headerText="#{msg['hr.salary.amount']}" style="width:130px;direction:ltr;text-align:left">
+                    <span style="font-weight:800;font-size:14px;
+                        color:#{pay.type.toString()=='receipt'?'#0F6E56':'#e74c3c'}">
+                        <h:outputText value="#{pay.amount}">
+                            <f:convertNumber pattern="#,##0.00"/>
+                        </h:outputText>
+                    </span>
+                </p:column>
+                <p:column headerText="الطريقة" style="width:90px;text-align:center">
+                    <h:outputText value="#{pay.method}"/>
+                </p:column>
+                <p:column headerText="#{msg['trade.payment.reference']}">
+                    <h:outputText value="#{pay.reference != null ? pay.reference : '—'}"/>
+                </p:column>
+
+            </p:dataTable>
+        </div>
+
+    </div>
+</div>
+
+</h:form>
+</ui:define>
+</ui:composition>
+</html>

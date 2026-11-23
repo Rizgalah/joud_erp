@@ -1,0 +1,587 @@
+﻿-- ============================================================
+-- Joud ERP System - Database Schema (PostgreSQL Version)
+-- Date: 2026-05-30 (Migrated to PostgreSQL)
+-- ============================================================
+
+-- ============================================================
+-- GROUP: User Admin
+-- ============================================================
+
+CREATE TABLE KEY_GENERATION
+(
+  KEY_I_ID     BIGINT        PRIMARY KEY,
+  TABLE_C_NAME VARCHAR(100),
+  ID_I_GEN     BIGINT,
+  ID_C_REMARKS VARCHAR(250)
+);
+
+CREATE TABLE AGENT_MAST
+(
+  AGENT_I_ID   BIGINT        PRIMARY KEY,
+  AGENT_C_NAME VARCHAR(100)  NOT NULL,
+  user_i_id    BIGINT        
+);
+
+CREATE TABLE EMPLOYEE_MAST
+(
+  EMP_i_id           BIGINT        PRIMARY KEY,
+  EMP_I_SEQNO        INT           NOT NULL,
+  AGENT_I_ID         BIGINT        REFERENCES AGENT_MAST(AGENT_I_ID),
+  DESIGN_i_id        VARCHAR(10),
+  EMP_C_NAME         VARCHAR(100)  NOT NULL,
+  EMP_C_ADD1         VARCHAR(100)  NOT NULL,
+  EMP_C_code         VARCHAR(10)
+  EMP_C_ADD2         VARCHAR(100),
+  EMP_C_CITY         VARCHAR(25),
+  COUNTRY_C_CODE     VARCHAR(10),
+  EMP_D_DOJ          TIMESTAMP     NOT NULL,
+  EMP_D_CONFIRM      TIMESTAMP,
+  EMP_D_DOB          DATE,         -- Pure date of birth, no time needed
+  EMP_C_SEX          VARCHAR(1),
+  EMP_C_MARSTS       VARCHAR(1),
+  EMP_D_LSTINCR      TIMESTAMP,
+  EMP_F_BASIC        NUMERIC(23,5) NOT NULL,
+  EMP_F_LSTINCRAMT   NUMERIC(23,5),
+  EMP_C_EDUQUALI     VARCHAR(25),
+  EMP_D_EDUDATE      DATE,
+  EMP_C_PFNO         VARCHAR(15),
+  EMP_C_ESINO        VARCHAR(15),
+  EMP_D_ENTRY        TIMESTAMP,
+  EMP_C_STATUS       VARCHAR(1),
+  EMP_C_FLAG         VARCHAR(1),
+  PAY_C_CONFIRMSTS   VARCHAR(1),
+  PAY_C_SALSTS       VARCHAR(1),
+  PAY_C_BANKTRAINSTS VARCHAR(1)    DEFAULT 'N',
+  PAY_F_STAFFSECDEP  NUMERIC(23,5) DEFAULT 0.00,
+  PAY_I_HEIRARCHY    INT,
+  EMP_C_AUTHLEVEL    VARCHAR(10),
+  EMP_I_INCRNO       INT,
+  SEQ                INT,
+  CUST_I_OLDNO       BIGINT
+);
+
+drop table users;
+drop table role;
+drop table user_roles;
+alter table users drop column failed_c_attempts ;
+alter table users add column failed_c_attempts BIGINT default 0;
+
+CREATE TABLE users
+(
+  user_i_id        BIGINT        PRIMARY KEY,
+  password_c_hash  VARCHAR(100)  NOT NULL,
+  user_c_name      VARCHAR(100)  UNIQUE NOT NULL,
+  full_name        varchar(200)  default ''
+  email            VARCHAR(100)  UNIQUE NOT NULL,
+  users_c_status   VARCHAR(1)    DEFAULT 'A' NOT NULL,
+  failed_i_attempts BIGINT default 0 NOT NULL,
+  locked_i_until   BIGINT,
+  last_login       TIMESTAMP,
+  EMP_i_id         BIGINT        REFERENCES EMPLOYEE_MAST(EMP_i_id),
+  AGENT_I_ID       BIGINT        REFERENCES AGENT_MAST(AGENT_I_ID),
+  created_at       TIMESTAMP     DEFAULT CURRENT_TIMESTAMP,
+  language_c_code varchar(10) default 'ar',
+  password_c_hash_change_date timestamp(6) default now(),
+ is_lockout_enabled boolean default true,
+ is_two_factor_enabled boolean default false  
+);
+-- BCrypt hash لكلمة المرور "admin123" (cost=12)
+--INSERT INTO users (user_i_id, user_c_name, password_c_hash, full_name,users_c_status,email)
+--VALUES (1, 'SA',
+--  '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LwTqa6hG5B8DmHqe',
+ -- 'مدير النظام', 'A','a.rizgalah@gmail.com');
+
+CREATE TABLE role
+(
+  role_i_id   BIGINT        PRIMARY KEY,
+  role_c_name VARCHAR(30)   UNIQUE,
+  role_c_desc VARCHAR(100)
+);
+INSERT INTO role (role_i_id, role_c_name, role_c_desc)
+VALUES (1, 'ADMIN', 'مدير النظام — كامل الصلاحيات');
+CREATE TABLE user_roles
+(
+  user_i_id   BIGINT   REFERENCES users(user_i_id),
+  role_i_id   BIGINT   REFERENCES role(role_i_id),
+  assigned_d_at TIMESTAMP
+);
+INSERT INTO user_roles (user_i_id, role_i_id) VALUES (1, 1);
+CREATE TABLE role_permissions (
+    role_i_id BIGINT NOT NULL,
+    permission_code VARCHAR(100) NOT NULL,
+    PRIMARY KEY (role_i_id, permission_code),
+    FOREIGN KEY (role_i_id) REFERENCES role(role_i_id) ON DELETE CASCADE
+);
+INSERT INTO role_permissions (role_i_id, permission_code) VALUES (1, 'ALL');
+-- ============================================================
+-- GROUP: Security
+-- ============================================================
+
+CREATE TABLE sessions
+(
+  Sess_i_id  BIGINT        PRIMARY KEY,
+  user_i_id  BIGINT        REFERENCES users(user_i_id),
+  token_hash VARCHAR(250),
+  ip_address VARCHAR(250),
+  expires_at TIMESTAMP,
+  revoked    TIMESTAMP
+);
+
+CREATE TABLE login_attempts
+(
+  log_i_id     BIGINT        PRIMARY KEY,
+  ip_address   VARCHAR(250),
+  email        VARCHAR(100)  REFERENCES users(email),
+  attempted_at TIMESTAMP,
+  success      VARCHAR(1)    DEFAULT 'Y'
+);
+
+CREATE TABLE reset_tokens
+(
+  token_hash VARCHAR(250),
+  user_i_id  BIGINT   REFERENCES users(user_i_id),
+  expires_at TIMESTAMP,
+  used       TIMESTAMP
+);
+
+-- ============================================================
+-- GROUP: Audit
+-- ============================================================
+
+CREATE TABLE audit_log
+(
+  audit_i_id   BIGINT        PRIMARY KEY,
+  table_c_name VARCHAR(100),
+  record_id    BIGINT,
+  action       VARCHAR(10),
+  old_values   VARCHAR(250),
+  new_values   VARCHAR(250),
+  actor_id     BIGINT
+);
+
+-- ============================================================
+-- GROUP: Maintenance
+-- ============================================================
+
+CREATE TABLE backup_history
+(
+  backup_i_id    BIGINT        PRIMARY KEY,
+  file_c_name    VARCHAR(100),
+  file_i_size    BIGINT,
+  check_c_sum    VARCHAR(1)    DEFAULT 'N',
+  backup_c_status VARCHAR(1)   DEFAULT 'N',
+  triggered_by   VARCHAR(100),
+  created_at     TIMESTAMP
+);
+
+CREATE TABLE security_events
+(
+  event_i_id       BIGINT        PRIMARY KEY,
+  event_c_type     VARCHAR(10),
+  event_c_ip       VARCHAR(250),
+  user_i_id        BIGINT        REFERENCES users(user_i_id),
+  event_c_detail   VARCHAR(250),
+  event_c_severity VARCHAR(250),
+  created_at       TIMESTAMP
+);
+
+-- ============================================================
+-- GROUP: Application Data Model - Accounting
+-- ============================================================
+
+CREATE TABLE LEDGER_GROUP
+(
+  GROUP_I_ID       BIGINT        PRIMARY KEY,
+  GROUP_C_DESC     VARCHAR(100)  NOT NULL,
+  GROUP_C_TYPE     VARCHAR(1)    NOT NULL,
+  BALANCE_C_TYPE   VARCHAR(1)    NOT NULL,
+  GROUP_C_OTHER    VARCHAR(10),
+  GROUP_I_SEQUENCE INT,
+  user_i_id        BIGINT        REFERENCES users(user_i_id)
+);
+
+CREATE TABLE MAINLDG_MAST
+(
+  LDG_I_ID   BIGINT        PRIMARY KEY,
+  GROUP_I_ID BIGINT        REFERENCES LEDGER_GROUP(GROUP_I_ID),
+  LDG_C_DESC VARCHAR(100)  NOT NULL,
+  user_i_id  BIGINT        REFERENCES users(user_i_id)
+);
+
+CREATE TABLE SUBLDG_MAST
+(
+  SUB_I_ID      BIGINT        PRIMARY KEY,
+  LDG_I_ID      BIGINT        REFERENCES MAINLDG_MAST(LDG_I_ID),
+  SUB_C_LDGDESC VARCHAR(100)  NOT NULL,
+  SUB_C_TYPE    VARCHAR(1)    NOT NULL,
+  SUB_C_REVALID VARCHAR(1)    NOT NULL,
+  GROUP_I_ID    BIGINT        REFERENCES LEDGER_GROUP(GROUP_I_ID),
+  ACT_C_TYPE    VARCHAR(10)   NOT NULL,
+  PROFIT_C_CALC VARCHAR(1),
+  ACT_C_CLASS   VARCHAR(10),
+  ACT_C_NATURE  VARCHAR(10),
+  BUD_C_FLAG    VARCHAR(1),
+  user_i_id     BIGINT        REFERENCES users(user_i_id)
+);
+
+CREATE TABLE CURRENCY_MAST
+(
+  CURRENCY_I_ID      BIGINT        PRIMARY KEY,
+  CURRENCY_C_DESC    VARCHAR(100)  NOT NULL,
+  CURRENCY_C_SYMBOL  VARCHAR(10),
+  CURRENCY_C_LOWCODE VARCHAR(10),
+  CURRENCY_C_LOWDESC VARCHAR(50),
+  CURRENCY_F_RETEN   NUMERIC(23,5),
+  SWIFT_C_DESC       VARCHAR(100),
+  user_i_id          BIGINT        REFERENCES users(user_i_id)
+);
+
+-- ============================================================
+-- GROUP: KYC Data Model
+-- ============================================================
+
+CREATE TABLE parties
+(
+  parties_i_id         BIGINT         PRIMARY KEY,
+  parties_c_code       VARCHAR(100)   UNIQUE NOT NULL,
+  parties_c_name       VARCHAR(255)   NOT NULL,
+  parties_c_type       VARCHAR(20)    NOT NULL,   -- 'customer' | 'supplier' | 'both'
+  parties_c_address    VARCHAR(500),
+  parties_c_phone      VARCHAR(50),
+  parties_c_email      VARCHAR(100),
+  parties_c_tax_number VARCHAR(100),
+  notes                TEXT,
+  is_active            SMALLINT       DEFAULT 1,
+  created_at           TIMESTAMP      DEFAULT CURRENT_TIMESTAMP,
+  updated_at           TIMESTAMP      DEFAULT CURRENT_TIMESTAMP,
+  AGENT_I_ID           BIGINT         REFERENCES AGENT_MAST(AGENT_I_ID),
+  user_i_id            BIGINT         REFERENCES users(user_i_id)
+);
+
+CREATE TABLE ACCOUNT_MAST
+(
+  ACT_I_ID         BIGINT        PRIMARY KEY,
+  SUB_I_ID         BIGINT        REFERENCES SUBLDG_MAST(SUB_I_ID),
+  AGENT_I_ID       BIGINT        REFERENCES AGENT_MAST(AGENT_I_ID),
+  ACT_C_TYPE       VARCHAR(10)   ,
+  CUST_I_NO        BIGINT        NOT NULL,
+  CURRENCY_I_ID    BIGINT        REFERENCES CURRENCY_MAST(CURRENCY_I_ID),
+  ACT_C_NAME       VARCHAR(250)  NOT NULL,
+  CUST_C_MNAME     VARCHAR(250),
+  ACT_D_OPDATE     TIMESTAMP     NOT NULL,
+  ACT_C_ACTSTS     VARCHAR(1)    DEFAULT 'A',
+  ACT_C_ODSTS      VARCHAR(1)    DEFAULT 'Y',
+  ACT_I_INTROID    BIGINT,
+  ACT_I_TRBRCODE   BIGINT,
+  ACT_D_CLOSDT     TIMESTAMP,
+  CLOSURE_C_REASON VARCHAR(250),
+  ACT_C_PAYFLAG    VARCHAR(1),
+  INTRO_C_REM      VARCHAR(100),
+  MODIFY_I_BY      BIGINT        REFERENCES users(user_i_id),
+  AUTH_I_BY        BIGINT        REFERENCES users(user_i_id),
+  AUTH_D_DATE      TIMESTAMP,
+  ACT_I_KYC        BIGINT,
+  parties_i_id     BIGINT        REFERENCES parties(parties_i_id),
+  EMP_i_id         BIGINT        REFERENCES EMPLOYEE_MAST(EMP_i_id),
+  user_i_id        BIGINT        REFERENCES users(user_i_id)
+);
+
+CREATE TABLE SBBAL_MAST
+(
+  SBBAL_I_ID    BIGINT        PRIMARY KEY,
+  ACT_I_ID      BIGINT        REFERENCES ACCOUNT_MAST(ACT_I_ID),
+  AGENT_I_ID    BIGINT        REFERENCES AGENT_MAST(AGENT_I_ID),
+  ACT_C_TYPE    VARCHAR(10)   ,
+  CUST_I_NO     BIGINT        ,
+  CURRENCY_I_ID BIGINT        REFERENCES CURRENCY_MAST(CURRENCY_I_ID),
+  SB_F_CLRBAL   NUMERIC(23,5),
+  SB_F_SHABAL   NUMERIC(23,5),
+  SB_F_RSVBAL   NUMERIC(23,5),
+  SB_F_ODBAL    NUMERIC(23,5),
+  SB_D_ODSTS    TIMESTAMP,
+  SB_D_TRNDATE  TIMESTAMP,
+  SB_I_NOTRAN   INT,
+  SB_F_INTRATE  NUMERIC(23,5),
+  SB_F_FREEZEAMT NUMERIC(23,5),
+  SB_F_RELEAMT  NUMERIC(23,5),
+  CUST_I_OLDNO  BIGINT
+);
+
+-- ============================================================
+-- GROUP: Core Data Model - Settings
+-- ============================================================
+
+CREATE TABLE AGENT_BROFILE
+(
+  BROFILE_I_ID                   BIGINT        PRIMARY KEY,
+  EFFECT_D_DATE                  TIMESTAMP     NOT NULL,
+  CURRENCY_I_ID                  BIGINT        REFERENCES CURRENCY_MAST(CURRENCY_I_ID),
+  ACT_I_ID                       BIGINT        REFERENCES ACCOUNT_MAST(ACT_I_ID),
+  AGENT_I_ID                     BIGINT        REFERENCES AGENT_MAST(AGENT_I_ID),
+  AGENT_C_MONHOL                 VARCHAR(1),
+  AGENT_C_TUEHOL                 VARCHAR(1),
+  AGENT_C_WEDHOL                 VARCHAR(1),
+  AGENT_C_THUHOL                 VARCHAR(1),
+  AGENT_C_FRIHOL                 VARCHAR(1),
+  AGENT_C_SATHOL                 VARCHAR(1),
+  AGENT_C_SUNHOL                 VARCHAR(1),
+  OPEN_D_DATE                    TIMESTAMP,
+  INSTALL_D_DATE                 TIMESTAMP,
+  BUD_C_AVAIL                    VARCHAR(1),
+  BUD_C_TYPE                     VARCHAR(1),
+  BR_C_INCEXP_GLHEAD             VARCHAR(10),
+  RATE_C_TYPE                    VARCHAR(10),
+  RET_I_REMINDERS                INT,
+  VERSION_D_DATE                 TIMESTAMP,
+  VERSION_C_NO                   VARCHAR(10),
+  developer_c_name               VARCHAR(255),
+  developer_c_contact            VARCHAR(255),
+  company_c_name                 VARCHAR(255),
+  company_c_logo                 VARCHAR(500),
+  company_c_address              VARCHAR(500),
+  company_c_phone                VARCHAR(100),
+  company_c_email                VARCHAR(100),
+  company_tax_number             VARCHAR(100),
+  invoice_prefix_sales           VARCHAR(20)   DEFAULT 'INV',
+  invoice_prefix_purchases       VARCHAR(20)   DEFAULT 'PUR',
+  invoice_prefix_sales_return    VARCHAR(20)   DEFAULT 'SR',
+  invoice_prefix_purchase_return VARCHAR(20)   DEFAULT 'PR',
+  tax_enabled                    SMALLINT      DEFAULT 0,
+  tax_rate                       NUMERIC       DEFAULT 14.0,
+  dark_mode                      SMALLINT      DEFAULT 0,
+  CASH_C_ACC                     VARCHAR(10)   ,
+  SESSION_TIME                   BIGINT        DEFAULT 1800,
+  user_i_id                      BIGINT        REFERENCES users(user_i_id)
+);
+
+-- ============================================================
+-- GROUP: Application Data Model - Inventory
+-- ============================================================
+
+CREATE TABLE warehouses
+(
+  ware_i_id     BIGINT         PRIMARY KEY,
+  ware_c_code   VARCHAR(100)   UNIQUE NOT NULL,
+  ware_c_name   VARCHAR(255)   NOT NULL,
+  ware_c_address VARCHAR(500),
+  ware_c_manager VARCHAR(255),
+  is_active     SMALLINT       DEFAULT 1,
+  created_at    TIMESTAMP      DEFAULT CURRENT_TIMESTAMP,
+  user_i_id     BIGINT         REFERENCES users(user_i_id)
+);
+
+CREATE TABLE categories
+(
+  categ_i_id   BIGINT         PRIMARY KEY,
+  categ_c_name VARCHAR(255)    NOT NULL,
+  categ_c_type VARCHAR(50)     NOT NULL,   -- 'product' | 'expense' | 'income'
+  parties_i_id BIGINT         REFERENCES parties(parties_i_id),
+  created_at   TIMESTAMP      DEFAULT CURRENT_TIMESTAMP,
+  user_i_id    BIGINT         REFERENCES users(user_i_id)
+);
+
+CREATE TABLE units
+(
+  unit_i_id       BIGINT         PRIMARY KEY,
+  unit_c_name     VARCHAR(200)    NOT NULL,
+  unit_short_name VARCHAR(50),
+  created_at      TIMESTAMP      DEFAULT CURRENT_TIMESTAMP,
+  user_i_id       BIGINT         REFERENCES users(user_i_id)
+);
+
+CREATE TABLE products
+(
+  prod_i_id        BIGINT         PRIMARY KEY,
+  prod_c_code      VARCHAR(100)   UNIQUE NOT NULL,
+  prod_c_name      VARCHAR(255)   NOT NULL,
+  categ_i_id       BIGINT         REFERENCES categories(categ_i_id),
+  unit_i_id        BIGINT         REFERENCES units(unit_i_id),
+  ware_i_id        BIGINT         REFERENCES warehouses(ware_i_id),
+  supplier_id      BIGINT         REFERENCES parties(parties_i_id),
+  purchase_price   NUMERIC        DEFAULT 0,
+  CURRENCY_I_ID    BIGINT         REFERENCES CURRENCY_MAST(CURRENCY_I_ID),
+  sale_price       NUMERIC        DEFAULT 0,
+  opening_quantity NUMERIC        DEFAULT 0,
+  current_quantity NUMERIC        DEFAULT 0,
+  min_quantity     NUMERIC        DEFAULT 0,
+  is_active        SMALLINT       DEFAULT 1,
+  notes            TEXT,
+  created_at       TIMESTAMP      DEFAULT CURRENT_TIMESTAMP,
+  updated_at       TIMESTAMP      DEFAULT CURRENT_TIMESTAMP,
+  user_i_id        BIGINT         REFERENCES users(user_i_id)
+);
+
+-- ============================================================
+-- GROUP: Application Data Model - Sales & Purchases
+-- ============================================================
+
+CREATE TABLE invoices
+(
+  invoice_i_id   BIGINT         PRIMARY KEY,
+  invoice_number VARCHAR(100)   UNIQUE NOT NULL,
+  invoice_c_type VARCHAR(50)    NOT NULL,   -- 'sale' | 'purchase' | 'sale_return' | 'purchase_return'
+  party_id       BIGINT         REFERENCES parties(parties_i_id),
+  warehouse_id   BIGINT         REFERENCES warehouses(ware_i_id),
+  AGENT_I_ID     BIGINT         REFERENCES AGENT_MAST(AGENT_I_ID),
+  invoice_d_DATE TIMESTAMP      NOT NULL,
+  due_d_date     TIMESTAMP,
+  subtotal       NUMERIC        DEFAULT 0,
+  CURRENCY_I_ID  BIGINT         REFERENCES CURRENCY_MAST(CURRENCY_I_ID),
+  discount_type  VARCHAR(20)    DEFAULT 'amount',   -- 'amount' | 'percentage'
+  discount_value NUMERIC        DEFAULT 0,
+  discount_amount NUMERIC       DEFAULT 0,
+  tax_enabled    SMALLINT       DEFAULT 0,
+  tax_rate       NUMERIC        DEFAULT 0,
+  tax_amount     NUMERIC        DEFAULT 0,
+  total          NUMERIC        DEFAULT 0,
+  paid_amount    NUMERIC        DEFAULT 0,
+  remaining_amount NUMERIC      DEFAULT 0,
+  payment_method VARCHAR(50)    NOT NULL,   -- 'cash' | 'partial' | 'credit'
+  status         VARCHAR(50)    DEFAULT 'posted',   -- 'draft' | 'posted' | 'cancelled'
+  notes          TEXT,
+  created_by     BIGINT         REFERENCES users(user_i_id),
+  created_at     TIMESTAMP      DEFAULT CURRENT_TIMESTAMP,
+  updated_at     TIMESTAMP      DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE invoice_items
+(
+  invitem_i_id  BIGINT         PRIMARY KEY,
+  invoice_id    BIGINT         REFERENCES invoices(invoice_i_id) ON DELETE CASCADE,
+  product_id    BIGINT         REFERENCES products(prod_i_id),
+  product_name  VARCHAR(255)   NOT NULL,
+  product_code  VARCHAR(100),
+  unit_name     VARCHAR(100),
+  AGENT_I_ID    BIGINT         REFERENCES AGENT_MAST(AGENT_I_ID),
+  quantity      NUMERIC        NOT NULL,
+  unit_price    NUMERIC        NOT NULL,
+  CURRENCY_I_ID BIGINT         REFERENCES CURRENCY_MAST(CURRENCY_I_ID),
+  discount_amount NUMERIC      DEFAULT 0,
+  total         NUMERIC        NOT NULL,
+  notes         TEXT,
+  created_by    BIGINT         REFERENCES users(user_i_id)
+);
+
+CREATE TABLE payments
+(
+  pay_i_id      BIGINT         PRIMARY KEY,
+  invoice_id    BIGINT         REFERENCES invoices(invoice_i_id),
+  party_id      BIGINT         REFERENCES parties(parties_i_id),
+  pay_c_type    VARCHAR(50)    NOT NULL,   -- 'receipt' | 'payment'
+  pay_i_amount  NUMERIC        NOT NULL,
+  AGENT_I_ID    BIGINT         REFERENCES AGENT_MAST(AGENT_I_ID),
+  CURRENCY_I_ID BIGINT         REFERENCES CURRENCY_MAST(CURRENCY_I_ID),
+  pay_d_DATE    TIMESTAMP      NOT NULL,
+  pay_c_method  VARCHAR(50)    DEFAULT 'cash',
+  pay_reference VARCHAR(255),
+  notes         TEXT,
+  created_at    TIMESTAMP      DEFAULT CURRENT_TIMESTAMP,
+  created_by    BIGINT         REFERENCES users(user_i_id)
+);
+
+-- ============================================================
+-- GROUP: Application Data Model - Treasury & Accounting Entries
+-- ============================================================
+
+CREATE TABLE treasury_transactions
+(
+  trn_i_id        BIGINT         PRIMARY KEY,
+  trn_c_type      VARCHAR(20)    NOT NULL,   -- 'in' | 'out'
+  category_id     BIGINT         REFERENCES categories(categ_i_id),
+  ACT_I_ID        BIGINT        REFERENCES ACCOUNT_MAST(ACT_I_ID),
+  party_id        BIGINT,
+  invoice_id      BIGINT,
+  trn_i_amount    NUMERIC        NOT NULL,
+  ACT_C_TYPE      VARCHAR(10)    ,
+  CURRENCY_I_ID   BIGINT         REFERENCES CURRENCY_MAST(CURRENCY_I_ID),
+  CUST_I_NO       BIGINT,
+  trn_d_DATE      TIMESTAMP      NOT NULL,
+  description     VARCHAR(500),
+  TRN_C_STS       VARCHAR(1),
+  SQE_I_CODE      INT,
+  TRN_C_CHQNO     VARCHAR(20),
+  TRN_D_CHQDATE   TIMESTAMP,
+  TRN_F_BALANCE   NUMERIC(23,5),
+  TRN_C_BALSTS    VARCHAR(2),
+  TRN_C_TO_TYPE   VARCHAR(10),
+  TRN_I_TO_NO     BIGINT,
+  UTI             BIGINT         DEFAULT 0 NOT NULL,
+  reference       VARCHAR(255),
+  created_by      BIGINT         REFERENCES users(user_i_id),
+  created_at      TIMESTAMP      DEFAULT CURRENT_TIMESTAMP,
+  AGENT_I_ID      BIGINT         REFERENCES AGENT_MAST(AGENT_I_ID)
+);
+
+CREATE TABLE BATCH
+(
+  BBD_I_ID      BIGINT         PRIMARY KEY,
+  AGENT_I_ID    BIGINT         REFERENCES AGENT_MAST(AGENT_I_ID),
+  BBD_D_DATE    TIMESTAMP      NOT NULL,
+  BBD_I_SLNO    BIGINT         NOT NULL,
+  BBD_C_DRCR    VARCHAR(2)     NOT NULL,
+  ACT_C_TYPE    VARCHAR(10)    NOT NULL,
+  CUST_I_NO     BIGINT,
+  CURRENCY_I_ID BIGINT         REFERENCES CURRENCY_MAST(CURRENCY_I_ID),
+  BBD_F_AMT     NUMERIC(23,5)  NOT NULL,
+  BBD_C_CHQNO   VARCHAR(20),
+  BBD_C_CHQDT   TIMESTAMP,
+  BBD_C_STS     VARCHAR(2),
+  OPER_I_ID     BIGINT,
+  BBD_C_USRID   BIGINT         REFERENCES users(user_i_id),
+  BBD_C_PAYEE   VARCHAR(200),
+  BBD_F_ODAMT   NUMERIC(23,5),
+  BBD_C_MODE    VARCHAR(4),
+  UTI           BIGINT         DEFAULT 0 NOT NULL,
+  BBD_D_DATETIME TIMESTAMP      DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE DAY_LEDG
+(
+  TRN_I_NO      BIGINT         PRIMARY KEY,
+  AGENT_I_ID    BIGINT         REFERENCES AGENT_MAST(AGENT_I_ID),
+  TRN_D_DATE    TIMESTAMP      NOT NULL,
+  ACT_C_TYPE    VARCHAR(10)    NOT NULL,
+  CUST_I_NO     BIGINT,
+  TRN_C_NARR    VARCHAR(250),
+  CURRENCY_I_ID BIGINT         REFERENCES CURRENCY_MAST(CURRENCY_I_ID),
+  TRN_F_TRNAMT  NUMERIC(23,5)  NOT NULL,
+  TRN_C_DRCR    VARCHAR(2)     NOT NULL,
+  TRT_C_TYPE    VARCHAR(10),
+  TRN_C_STS     VARCHAR(1),
+  SEQ_I_CODE    DOUBLE PRECISION,
+  TRN_C_CHQNO   VARCHAR(10),
+  TRN_D_CHQDATE TIMESTAMP,
+  TRN_C_USRID   BIGINT         REFERENCES users(user_i_id),
+  TRN_F_BALANCE NUMERIC(20,2),
+  TRN_C_BALSTS  VARCHAR(2),
+  TRN_C_TOTYPE  VARCHAR(10),
+  TRN_I_TONO    DOUBLE PRECISION,
+  UTI           BIGINT         DEFAULT 0 NOT NULL,
+  SCREEN_NAME   VARCHAR(40)    DEFAULT 'No Screen Name' NOT NULL
+);
+
+-- ============================================================
+-- GROUP: Application Data Model - Stock Movements
+-- ============================================================
+
+CREATE TABLE stock_movements
+(
+  move_i_id     BIGINT         PRIMARY KEY,
+  product_id    BIGINT         REFERENCES products(prod_i_id),
+  invoice_id    BIGINT         REFERENCES invoices(invoice_i_id),
+  move_c_type   VARCHAR(20)    NOT NULL,   -- 'in' | 'out' | 'adjustment'
+  move_quantity NUMERIC        NOT NULL,
+  move_unit_price NUMERIC,
+  CURRENCY_I_ID BIGINT         REFERENCES CURRENCY_MAST(CURRENCY_I_ID),
+  warehouse_id  BIGINT         REFERENCES warehouses(ware_i_id),
+  move_d_DATE   TIMESTAMP      NOT NULL,
+  notes         TEXT,
+  AGENT_I_ID    BIGINT         REFERENCES AGENT_MAST(AGENT_I_ID),
+  created_at    TIMESTAMP      DEFAULT CURRENT_TIMESTAMP,
+  created_by    BIGINT         REFERENCES users(user_i_id)
+);
+
+-- ============================================================
+-- END OF SCHEMA
+-- Total Tables: 27
+-- ============================================================

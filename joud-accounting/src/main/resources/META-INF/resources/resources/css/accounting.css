@@ -1,0 +1,232 @@
+/* ═══════════════════════════════════════════════════
+   Joud ERP — Accounting Module Styles
+   ═══════════════════════════════════════════════════ */
+
+/* ─── شاشة القيد ─────────────────────────────────── */
+.jv-header {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 14px;
+    margin-bottom: 18px;
+}
+
+.jv-lines-table .p-datatable-thead > tr > th {
+    background: var(--primary, #1B3A6B) !important;
+    color: white !important;
+    font-size: 13px !important;
+    padding: 10px 12px !important;
+    text-align: right !important;
+}
+
+.jv-lines-table .p-datatable-tbody > tr > td {
+    padding: 6px 10px !important;
+    font-size: 13px !important;
+    vertical-align: middle !important;
+}
+
+.jv-lines-table .p-datatable-tbody > tr:hover {
+    background: #f0f4f8 !important;
+}
+
+/* صف الإجمالي في أسفل جدول القيد */
+.jv-totals-row {
+    display: flex;
+    justify-content: flex-end;
+    gap: 30px;
+    padding: 12px 16px;
+    background: #f0f4f8;
+    border-top: 2px solid #1B3A6B;
+    border-radius: 0 0 8px 8px;
+    margin-top: -1px;
+}
+
+.jv-total-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 130px;
+}
+
+.jv-total-label { font-size: 11px; color: #888; margin-bottom: 3px; }
+
+.jv-total-value {
+    font-size: 16px;
+    font-weight: 800;
+    color: #1B3A6B;
+}
+
+.jv-total-value.dr  { color: #2980b9; }
+.jv-total-value.cr  { color: #27ae60; }
+.jv-total-value.diff { color: #e74c3c; }
+.jv-total-value.balanced { color: #27ae60; }
+
+/* شارة حالة القيد */
+.jv-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 700;
+}
+.jv-badge.draft    { background: #f8f9fa; color: #6c757d; border: 1px solid #dee2e6; }
+.jv-badge.pending  { background: #fff3cd; color: #856404; border: 1px solid #ffc107; }
+.jv-badge.approved { background: #d1e7dd; color: #0f5132; border: 1px solid #198754; }
+.jv-badge.void     { background: #f8d7da; color: #842029; border: 1px solid #dc3545; }
+
+/* ─── التقارير ───────────────────────────────────── */
+.report-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 14px 0;
+    margin-bottom: 16px;
+    border-bottom: 2px solid #f0f4f8;
+}
+
+.report-level-tabs {
+    display: flex;
+    gap: 4px;
+    background: #f0f4f8;
+    padding: 4px;
+    border-radius: 8px;
+}
+
+.report-level-tab {
+    padding: 6px 16px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    color: #666;
+    transition: all 0.2s;
+}
+
+.report-level-tab.active {
+    background: #1B3A6B;
+    color: white;
+    box-shadow: 0 2px 8px rgba(27,58,107,0.25);
+}
+
+/* جدول التقارير */
+.report-table .p-datatable-thead > tr > th {
+    background: #1B3A6B !important;
+    color: white !important;
+    font-size: 12.5px !important;
+    padding: 10px 14px !important;
+    text-align: right !important;
+    white-space: nowrap !important;
+}
+
+.report-table .p-datatable-tfoot > tr > td {
+    background: #e8f0fa !important;
+    font-weight: 800 !important;
+    font-size: 13px !important;
+    color: #1B3A6B !important;
+    border-top: 2px solid #1B3A6B !important;
+}
+
+.amt-dr   { color: #1a5276; font-weight: 700; }
+.amt-cr   { color: #1e8449; font-weight: 700; }
+.amt-zero { color: #aaa; }
+
+/* بطاقات الميزانية */
+.bs-card {
+    background: white;
+    border-radius: 10px;
+    border: 1px solid #d0d9e8;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(27,58,107,0.08);
+}
+
+.bs-card-header {
+    background: #1B3A6B;
+    color: white;
+    padding: 12px 18px;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.bs-card-body { padding: 0; }
+
+.bs-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 9px 18px;
+    font-size: 13px;
+    border-bottom: 1px solid #f0f4f8;
+}
+
+.bs-row:last-child { border-bottom: none; }
+.bs-row.subtotal   { background: #f8fafc; font-weight: 700; color: #1B3A6B; }
+.bs-row.total      { background: #e8f0fa; font-weight: 800; font-size: 14px; color: #1B3A6B; }
+.bs-row.profit     { background: #e1f5ee; font-weight: 800; font-size: 14px; color: #0f6e56; }
+.bs-row.loss       { background: #fdecea; font-weight: 800; font-size: 14px; color: #c0392b; }
+
+.bs-amount { font-weight: 700; direction: ltr; text-align: left; min-width: 120px; }
+
+/* ─── إدارة الفترات ──────────────────────────────── */
+.period-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+}
+
+.period-card {
+    border-radius: 10px;
+    padding: 14px;
+    border: 2px solid transparent;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.period-card.open   { background: #e1f5ee; border-color: #0f6e56; }
+.period-card.closed { background: #f8f9fa; border-color: #dee2e6; color: #888; }
+.period-card.locked { background: #f8d7da; border-color: #dc3545; color: #842029; }
+
+.period-card:hover  { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+
+/* ─── حقول النموذج (مشترك) ───────────────────────── */
+.trade-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: #555;
+    margin-bottom: 5px;
+}
+
+/* ─── أسعار الصرف — بطاقات سريعة ─────────────────── */
+.exrate-mini-card {
+    background: #f8fafc;
+    border: 1px solid #e3e9f2;
+    border-radius: 10px;
+    padding: 12px 14px;
+    transition: all 0.15s;
+}
+.exrate-mini-card:hover {
+    background: #eef4fb;
+    border-color: #2E75B6;
+    transform: translateY(-2px);
+}
+.exrate-mini-cur {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: #1B3A6B;
+    margin-bottom: 4px;
+}
+.exrate-mini-rate {
+    font-size: 18px;
+    font-weight: 800;
+    color: #0F6E56;
+    direction: ltr;
+    text-align: left;
+}
+.exrate-mini-date {
+    font-size: 10.5px;
+    color: #999;
+    margin-top: 4px;
+}

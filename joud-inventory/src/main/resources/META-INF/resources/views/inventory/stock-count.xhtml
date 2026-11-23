@@ -1,0 +1,243 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="jakarta.faces.html"
+      xmlns:f="jakarta.faces.core"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:ui="jakarta.faces.facelets"
+      lang="ar" dir="rtl">
+
+<ui:composition template="/WEB-INF/template.xhtml">
+<ui:define name="pageTitle">#{msg['inventory.count.title']}</ui:define>
+<ui:define name="extraStyles">
+    <h:outputStylesheet library="css" name="inventory.css"/>
+</ui:define>
+
+<ui:define name="content">
+<h:form id="countForm">
+<p:growl id="msgs" life="4000" showDetail="true"/>
+
+<div style="display:grid;grid-template-columns:340px 1fr;gap:16px">
+
+    <!-- ══ يمين: نموذج إنشاء جلسة ══ -->
+    <div>
+        <div class="joud-card">
+            <div class="joud-card-header">
+                <span class="joud-card-title">
+                    <i class="pi pi-clipboard" style="margin-left:8px;color:#2E75B6"/>
+                    جلسة جرد جديدة
+                </span>
+            </div>
+
+            <div style="display:grid;gap:14px;padding:4px">
+
+                <div>
+                    <label class="inv-label">وصف الجلسة *</label>
+                    <p:inputText value="#{countBean.description}" style="width:100%"
+                                 placeholder="مثال: جرد شهر يونيو 2026"/>
+                </div>
+
+                <div>
+                    <label class="inv-label">المستودع</label>
+                    <p:selectOneMenu value="#{countBean.warehouseId}" style="width:100%">
+                        <f:selectItem itemLabel="كل المستودعات" itemValue="#{null}"/>
+                        <f:selectItems value="#{prodBean.warehouses}"
+                                       var="w" itemValue="#{w[0]}" itemLabel="#{w[1]}"/>
+                    </p:selectOneMenu>
+                </div>
+
+                <div>
+                    <label class="inv-label">نطاق الجرد</label>
+                    <p:selectOneMenu value="#{countBean.scope}" style="width:100%">
+                        <f:selectItem itemLabel="كل الأصناف"  itemValue="A"/>
+                        <f:selectItem itemLabel="فئة محددة"   itemValue="C"/>
+                    </p:selectOneMenu>
+                </div>
+
+                <ui:fragment rendered="#{countBean.scope=='C'}">
+                    <div>
+                        <label class="inv-label">الفئة</label>
+                        <p:selectOneMenu value="#{countBean.categoryId}" style="width:100%">
+                            <f:selectItem itemLabel="— اختر الفئة —" itemValue="#{null}"/>
+                            <f:selectItems value="#{prodBean.categories}"
+                                           var="c" itemValue="#{c[0]}" itemLabel="#{c[1]}"/>
+                        </p:selectOneMenu>
+                    </div>
+                </ui:fragment>
+
+                <p:commandButton value="إنشاء جلسة الجرد" icon="pi pi-play"
+                    styleClass="p-button-success" style="width:100%"
+                    action="#{countBean.createCount}"
+                    update="countForm:msgs countForm:countTable countForm:detailPanel"
+                    ajax="true"/>
+
+            </div>
+        </div>
+
+        <!-- إرشادات -->
+        <div class="joud-card" style="margin-top:14px;padding:14px">
+            <div style="font-size:13px;font-weight:700;color:#1B3A6B;margin-bottom:10px">
+                <i class="pi pi-info-circle" style="margin-left:6px"/>
+                كيفية إجراء الجرد
+            </div>
+            <div style="font-size:12px;color:#666;line-height:1.8">
+                1. أنشئ جلسة جرد جديدة<br/>
+                2. أدخل الكميات الفعلية لكل صنف<br/>
+                3. راجع الفروقات<br/>
+                4. اضغط «ترحيل» لتحديث المخزون
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ يسار: قائمة الجلسات + التفاصيل ══ -->
+    <div>
+
+        <!-- قائمة جلسات الجرد -->
+        <ui:fragment rendered="#{!countBean.showDetail}">
+            <div class="joud-card">
+                <div class="joud-card-header">
+                    <span class="joud-card-title">
+                        <i class="pi pi-list" style="margin-left:8px;color:#2E75B6"/>
+                        جلسات الجرد
+                    </span>
+                </div>
+
+                <p:dataTable id="countTable" value="#{countBean.countList}" var="c"
+                             styleClass="inv-table" rows="15" paginator="true"
+                             emptyMessage="لا توجد جلسات جرد">
+
+                    <p:column headerText="الوصف">
+                        <h:outputText value="#{c.description}"/>
+                    </p:column>
+                    <p:column headerText="#{msg['accounting.statement.date.from']}" style="width:110px">
+                        <h:outputText value="#{c.countDate}">
+                            <f:convertDateTime pattern="dd/MM/yyyy"/>
+                        </h:outputText>
+                    </p:column>
+                    <p:column headerText="الأصناف" style="width:80px;text-align:center">
+                        <span style="font-weight:700;color:#1B3A6B">#{c.itemCount}</span>
+                    </p:column>
+                    <p:column headerText="فرق القيمة" style="width:120px;direction:ltr;text-align:left">
+                        <span style="font-weight:700;
+                            color:#{c.diffValue.compareTo(c.diffValue.ZERO)!=0?'#e74c3c':'#0F6E56'}">
+                            <h:outputText value="#{c.diffValue}">
+                                <f:convertNumber pattern="#,##0.00"/>
+                            </h:outputText>
+                        </span>
+                    </p:column>
+                    <p:column headerText="#{msg['status.active']}" style="width:90px;text-align:center">
+                        <span class="inv-badge count-#{c.status}">
+                            #{c.status.toString()=='D'?'مسودة':c.status.toString()=='I'?'جارٍ':c.status.toString()=='C'?'مكتمل':'مرحّل'}
+                        </span>
+                    </p:column>
+                    <p:column headerText="#{msg['btn.edit']}" style="width:100px;text-align:center">
+                        <p:commandButton icon="pi pi-eye" title="فتح"
+                            styleClass="p-button-info p-button-text p-button-sm"
+                            rendered="#{c.status.toString()!='P'}"
+                            action="#{countBean.viewDetail(c)}"
+                            update="countForm:detailPanel countForm:countTable"/>
+                        <p:commandButton icon="pi pi-check" title="ترحيل"
+                            styleClass="p-button-success p-button-text p-button-sm"
+                            rendered="#{c.status.toString()=='I' or c.status.toString()=='C'}"
+                            action="#{countBean.postCount(c.id)}"
+                            update="countForm:msgs countForm:countTable"
+                            onclick="return confirm('ترحيل الجرد وتحديث المخزون؟')"/>
+                    </p:column>
+
+                </p:dataTable>
+            </div>
+        </ui:fragment>
+
+        <!-- تفاصيل جلسة الجرد -->
+        <ui:fragment rendered="#{countBean.showDetail and countBean.selected != null}">
+            <div class="joud-card" id="detailPanel">
+
+                <div class="joud-card-header">
+                    <span class="joud-card-title">
+                        <i class="pi pi-clipboard" style="margin-left:8px;color:#2E75B6"/>
+                        #{countBean.selected.description}
+                    </span>
+                    <div style="display:flex;gap:8px">
+                        <!-- ملخص الفروقات -->
+                        <span style="font-size:12px;padding:4px 12px;background:#fff3cd;
+                                     border-radius:8px;color:#856404">
+                            فروقات: #{countBean.diffCount} صنف |
+                            قيمة:
+                            <h:outputText value="#{countBean.totalDiff}">
+                                <f:convertNumber pattern="#,##0.00"/>
+                            </h:outputText>
+                        </span>
+                        <p:commandButton value="#{msg['btn.save']}" icon="pi pi-save"
+                            styleClass="p-button-outlined p-button-sm"
+                            action="#{countBean.saveLines}"
+                            update="countForm:msgs"/>
+                        <p:commandButton value="ترحيل" icon="pi pi-check"
+                            styleClass="p-button-success p-button-sm"
+                            action="#{countBean.postCount(countBean.selected.id)}"
+                            update="countForm:msgs countForm:countTable"
+                            oncomplete="if(!args.validationFailed) PF('detailPanel').hide()"
+                            onclick="return confirm('ترحيل وتحديث المخزون؟')"/>
+                        <p:commandButton icon="pi pi-arrow-right" title="رجوع"
+                            styleClass="p-button-outlined p-button-secondary p-button-sm"
+                            action="#{countBean.closeDetail}"
+                            update="countForm:countTable countForm:detailPanel"/>
+                    </div>
+                </div>
+
+                <p:dataTable value="#{countBean.selected.lines}" var="line"
+                             styleClass="inv-table" rows="30" paginator="true"
+                             rowStyleClass="#{line.hasDifference()?'row-diff':''}"
+                             emptyMessage="لا توجد أصناف">
+
+                    <p:column headerText="كود الصنف" style="width:110px;font-weight:600;color:#2E75B6">
+                        <h:outputText value="#{line.productCode}"/>
+                    </p:column>
+                    <p:column headerText="اسم الصنف">
+                        <h:outputText value="#{line.productName}"/>
+                    </p:column>
+                    <p:column headerText="الكمية النظامية" style="width:130px;direction:ltr;text-align:left">
+                        <span style="color:#888">
+                            <h:outputText value="#{line.sysQty}">
+                                <f:convertNumber pattern="#,##0.###"/>
+                            </h:outputText>
+                        </span>
+                    </p:column>
+                    <p:column headerText="الكمية الفعلية *" style="width:140px">
+                        <p:inputNumber value="#{line.actualQty}" decimalPlaces="3"
+                                       style="width:120px" styleClass="count-input">
+                            <p:ajax event="blur"
+                                    update="countForm:diffSummary"/>
+                        </p:inputNumber>
+                    </p:column>
+                    <p:column headerText="#{msg['inventory.count.diff.qty']}" style="width:110px;direction:ltr;text-align:left">
+                        <span style="font-weight:800;
+                            color:#{line.diffQty.compareTo(line.diffQty.ZERO) > 0 ? '#0F6E56' :
+                                   line.diffQty.compareTo(line.diffQty.ZERO) lt 0 ? '#e74c3c' : '#888'}">
+                            <h:outputText value="#{line.diffQty}">
+                                <f:convertNumber pattern="#,##0.###"/>
+                            </h:outputText>
+                        </span>
+                    </p:column>
+                    <p:column headerText="قيمة الفرق" style="width:120px;direction:ltr;text-align:left">
+                        <span style="font-weight:700;color:#e74c3c">
+                            <h:outputText value="#{line.diffValue}">
+                                <f:convertNumber pattern="#,##0.00"/>
+                            </h:outputText>
+                        </span>
+                    </p:column>
+                    <p:column headerText="ملاحظة" style="width:130px">
+                        <p:inputText value="#{line.notes}" style="width:120px;font-size:12px"/>
+                    </p:column>
+
+                </p:dataTable>
+
+            </div>
+        </ui:fragment>
+
+    </div>
+</div>
+
+</h:form>
+</ui:define>
+</ui:composition>
+</html>

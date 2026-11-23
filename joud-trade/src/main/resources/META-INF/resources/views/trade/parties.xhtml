@@ -1,0 +1,260 @@
+<!-- ════════════════════════════════════════════════
+     parties.xhtml — إدارة العملاء وال#{msg['trade.party.type.supplier']}ين
+════════════════════════════════════════════════ -->
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="jakarta.faces.html"
+      xmlns:f="jakarta.faces.core"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:ui="jakarta.faces.facelets"
+      lang="ar" dir="rtl">
+
+<ui:composition template="/WEB-INF/template.xhtml">
+<ui:define name="pageTitle">#{msg['trade.parties.title']}</ui:define>
+<ui:define name="extraStyles">
+    <h:outputStylesheet library="css" name="trade.css"/>
+</ui:define>
+<ui:define name="content">
+<h:form id="prtForm">
+<p:growl id="msgs" life="4000"/>
+
+<!-- فلاتر -->
+<div class="joud-card" style="margin-bottom:14px">
+    <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
+
+        <div style="display:flex;gap:4px;background:#f0f4f8;padding:4px;border-radius:8px">
+            <p:commandButton value="الكل"      styleClass="#{partiesBean.filterType=='all'?'p-button-primary':'p-button-text p-button-plain'}"
+                action="#{partiesBean.setFilterType('all')}" update="prtForm" ajax="true"/>
+            <p:commandButton value="العملاء"   styleClass="#{partiesBean.filterType=='customer'?'p-button-primary':'p-button-text p-button-plain'}"
+                action="#{partiesBean.setFilterType('customer')}" update="prtForm"
+                oncomplete="partiesBean.loadParties()" ajax="true"/>
+            <p:commandButton value="ال#{msg['trade.party.type.supplier']}ون"  styleClass="#{partiesBean.filterType=='supplier'?'p-button-primary':'p-button-text p-button-plain'}"
+                action="#{partiesBean.setFilterType('supplier')}" update="prtForm" ajax="true"/>
+        </div>
+
+        <p:inputText value="#{partiesBean.searchQ}" placeholder="بحث بالاسم أو الهاتف..."
+                     style="width:220px">
+            <p:ajax event="keyup" delay="400"
+                    listener="#{partiesBean.search}" update="prtForm:prtTable"/>
+        </p:inputText>
+
+        <p:commandButton value="إضافة طرف جديد" icon="pi pi-plus"
+            styleClass="p-button-success" style="margin-right:auto"
+            action="#{partiesBean.prepareNew}"
+            update="prtForm:prtDialog"
+            oncomplete="PF('prtDlg').show()"/>
+
+    </div>
+</div>
+
+<!-- جدول الأطراف -->
+<div class="joud-card">
+    <p:dataTable id="prtTable" value="#{partiesBean.parties}" var="p"
+                 filteredValue="#{partiesBean.filtered}"
+                 styleClass="trade-table" rows="20" paginator="true"
+                 emptyMessage="#{msg['msg.no.data']}">
+
+        <p:column headerText="#{msg['trade.party.code']}" style="width:100px;font-weight:700;color:#2E75B6">
+            <h:outputText value="#{p.code}"/>
+        </p:column>
+        <p:column headerText="#{msg['trade.party.name']}" sortBy="#{p.name}" filterBy="#{p.name}">
+            <div style="font-weight:600">#{p.name}</div>
+            <div style="font-size:11px;color:#888">#{p.email}</div>
+        </p:column>
+        <p:column headerText="النوع" style="width:110px;text-align:center">
+            <span class="trade-badge type-#{p.type}">#{p.typeLabel}</span>
+        </p:column>
+        <p:column headerText="#{msg['trade.party.phone']}" style="width:130px">
+            <h:outputText value="#{p.phone}"/>
+        </p:column>
+        <p:column headerText="حد الائتمان" style="width:130px;direction:ltr;text-align:left">
+            <h:outputText value="#{p.creditLimit}">
+                <f:convertNumber pattern="#,##0.00"/>
+            </h:outputText>
+        </p:column>
+        <p:column headerText="شروط الدفع" style="width:100px;text-align:center">
+            #{p.paymentTermsDays} يوم
+        </p:column>
+        <p:column headerText="الائتمان" style="width:80px;text-align:center">
+            <span style="font-size:12px;font-weight:700;
+                color:#{p.creditStatus.toString()=='A'?'#0F6E56':'#e74c3c'}">
+                #{p.creditStatus.toString()=='A'?'مسموح':'موقوف'}
+            </span>
+        </p:column>
+        <p:column headerText="#{msg['btn.edit']}" style="width:120px;text-align:center">
+            <p:commandButton icon="pi pi-file-pdf" title="كشف الحساب"
+                styleClass="p-button-info p-button-text p-button-sm"
+                action="#{partiesBean.viewStatement(p)}"
+                update="prtForm:stmtPanel"
+                oncomplete="PF('stmtDlg').show()"/>
+            <p:commandButton icon="pi pi-pencil" title="تعديل"
+                styleClass="p-button-text p-button-sm"
+                action="#{partiesBean.prepareEdit(p)}"
+                update="prtForm:prtDialog"
+                oncomplete="PF('prtDlg').show()"/>
+            <p:commandButton icon="pi pi-trash" title="حذف"
+                styleClass="p-button-danger p-button-text p-button-sm"
+                action="#{partiesBean.deactivate(p)}"
+                update="prtForm:prtTable prtForm:msgs"
+                onclick="return confirm('حذف #{p.name}؟')"/>
+        </p:column>
+    </p:dataTable>
+</div>
+
+<!-- Dialog: إضافة / تعديل -->
+<p:dialog id="prtDialog" header="#{partiesBean.editMode?'تعديل':'طرف جديد'}"
+          widgetVar="prtDlg" modal="true" style="width:680px"
+          visible="#{partiesBean.showDialog}">
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:14px">
+
+        <div style="grid-column:span 2">
+            <label class="trade-label">الاسم الكامل *</label>
+            <p:inputText value="#{partiesBean.selected.name}" required="true"
+                         style="width:100%"/>
+        </div>
+        <div>
+            <label class="trade-label">نوع الطرف *</label>
+            <p:selectOneMenu value="#{partiesBean.selected.type}" style="width:100%">
+                <f:selectItem itemLabel="#{msg['trade.party.type.customer']}"       itemValue="customer"/>
+                <f:selectItem itemLabel="#{msg['trade.party.type.supplier']}"        itemValue="supplier"/>
+                <f:selectItem itemLabel="#{msg['trade.party.type.customer']} / #{msg['trade.party.type.supplier']}" itemValue="both"/>
+            </p:selectOneMenu>
+        </div>
+        <div>
+            <label class="trade-label">الهاتف</label>
+            <p:inputText value="#{partiesBean.selected.phone}" style="width:100%"/>
+        </div>
+        <div style="grid-column:span 2">
+            <label class="trade-label">البريد الإلكتروني</label>
+            <p:inputText value="#{partiesBean.selected.email}" style="width:100%"/>
+        </div>
+        <div>
+            <label class="trade-label">الرقم الضريبي</label>
+            <p:inputText value="#{partiesBean.selected.taxNumber}" style="width:100%"/>
+        </div>
+        <div>
+            <label class="trade-label">المنطقة</label>
+            <p:inputText value="#{partiesBean.selected.region}" style="width:100%"/>
+        </div>
+        <div>
+            <label class="trade-label">حد الائتمان</label>
+            <p:inputNumber value="#{partiesBean.selected.creditLimit}"
+                           decimalPlaces="2" style="width:100%"/>
+        </div>
+        <div>
+            <label class="trade-label">شروط الدفع (أيام)</label>
+            <p:inputText value="#{partiesBean.selected.paymentTermsDays}"
+                         style="width:100%"/>
+        </div>
+        <div>
+            <label class="trade-label">نسبة الضريبة %</label>
+            <p:inputNumber value="#{partiesBean.selected.taxRate}"
+                           decimalPlaces="2" style="width:100%"/>
+        </div>
+        <div>
+            <label class="trade-label">حالة الائتمان</label>
+            <p:selectOneMenu value="#{partiesBean.selected.creditStatus}" style="width:100%">
+                <f:selectItem itemLabel="مسموح"  itemValue="A"/>
+                <f:selectItem itemLabel="موقوف"  itemValue="H"/>
+                <f:selectItem itemLabel="محجوب"  itemValue="B"/>
+            </p:selectOneMenu>
+        </div>
+        <div style="grid-column:span 2">
+            <label class="trade-label">العنوان</label>
+            <p:inputText value="#{partiesBean.selected.address}" style="width:100%"/>
+        </div>
+
+    </div>
+
+    <f:facet name="footer">
+        <div style="display:flex;gap:8px;justify-content:flex-end">
+            <p:commandButton value="#{msg['btn.save']}" icon="pi pi-check" styleClass="p-button-success"
+                action="#{partiesBean.save}"
+                update="prtForm:prtTable prtForm:msgs"
+                oncomplete="if(!args.validationFailed) PF('prtDlg').hide()"/>
+            <p:commandButton value="#{msg['btn.cancel']}" icon="pi pi-times"
+                styleClass="p-button-outlined p-button-secondary"
+                onclick="PF('prtDlg').hide(); return false;"/>
+        </div>
+    </f:facet>
+</p:dialog>
+
+<!-- Dialog: كشف الحساب -->
+<p:dialog id="stmtPanel" header="كشف حساب — #{partiesBean.stmtParty.name}"
+          widgetVar="stmtDlg" modal="true" style="width:780px"
+          visible="#{partiesBean.showStmt}">
+
+    <ui:fragment rendered="#{partiesBean.stmtParty != null}">
+
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px">
+            <div style="background:#e8f0fa;border-radius:8px;padding:12px;text-align:center">
+                <div style="font-size:11px;color:#666">إجمالي المديونية</div>
+                <div style="font-size:16px;font-weight:800;color:#1a5276;direction:ltr">
+                    <h:outputText value="#{partiesBean.stmtTotalDebit}">
+                        <f:convertNumber pattern="#,##0.00"/>
+                    </h:outputText>
+                </div>
+            </div>
+            <div style="background:#e8f8f0;border-radius:8px;padding:12px;text-align:center">
+                <div style="font-size:11px;color:#666">إجمالي المدفوع</div>
+                <div style="font-size:16px;font-weight:800;color:#0F6E56;direction:ltr">
+                    <h:outputText value="#{partiesBean.stmtTotalCredit}">
+                        <f:convertNumber pattern="#,##0.00"/>
+                    </h:outputText>
+                </div>
+            </div>
+            <div style="background:#fdecea;border-radius:8px;padding:12px;text-align:center;border:2px solid #e74c3c">
+                <div style="font-size:11px;color:#666">الرصيد المتبقي</div>
+                <div style="font-size:16px;font-weight:800;color:#e74c3c;direction:ltr">
+                    <h:outputText value="#{partiesBean.stmtBalance}">
+                        <f:convertNumber pattern="#,##0.00"/>
+                    </h:outputText>
+                </div>
+            </div>
+        </div>
+
+        <p:dataTable value="#{partiesBean.stmtInvoices}" var="row"
+                     styleClass="trade-table" rows="15" paginator="true">
+            <p:column headerText="رقم الفاتورة" style="width:130px;font-weight:600;color:#2E75B6">
+                <h:outputText value="#{row[0]}"/>
+            </p:column>
+            <p:column headerText="النوع" style="width:120px;text-align:center">
+                <span class="trade-badge">#{row[1]}</span>
+            </p:column>
+            <p:column headerText="#{msg['accounting.statement.date.from']}" style="width:110px">
+                <h:outputText value="#{row[2]}">
+                    <f:convertDateTime pattern="dd/MM/yyyy"/>
+                </h:outputText>
+            </p:column>
+            <p:column headerText="#{msg['trade.invoice.total']}" style="width:120px;direction:ltr;text-align:left">
+                <h:outputText value="#{row[3]}"><f:convertNumber pattern="#,##0.00"/></h:outputText>
+            </p:column>
+            <p:column headerText="المدفوع" style="width:110px;direction:ltr;text-align:left">
+                <span style="color:#0F6E56">
+                    <h:outputText value="#{row[4]}"><f:convertNumber pattern="#,##0.00"/></h:outputText>
+                </span>
+            </p:column>
+            <p:column headerText="#{msg['trade.party.balance']}" style="width:110px;direction:ltr;text-align:left">
+                <span style="color:#e74c3c;font-weight:700">
+                    <h:outputText value="#{row[5]}"><f:convertNumber pattern="#,##0.00"/></h:outputText>
+                </span>
+            </p:column>
+        </p:dataTable>
+
+    </ui:fragment>
+
+    <f:facet name="footer">
+        <p:commandButton value="#{msg['btn.close']}" icon="pi pi-times"
+            styleClass="p-button-outlined"
+            action="#{partiesBean.closeStatement}"
+            update="prtForm:stmtPanel"
+            oncomplete="PF('stmtDlg').hide()"/>
+    </f:facet>
+</p:dialog>
+
+</h:form>
+</ui:define>
+</ui:composition>
+</html>

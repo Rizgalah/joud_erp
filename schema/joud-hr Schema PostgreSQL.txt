@@ -1,0 +1,345 @@
+﻿-- ============================================================
+-- joud erp — joud-hr plugin schema (postgresql version)
+-- ============================================================
+-- الجداول الجديدة:
+--   department_mast   -- الأقسام
+--   designation_mast  -- المسميات الوظيفية
+--   salary_component  -- مكونات الراتب (أساسي، بدلات، خصومات)
+--   salary_struct     -- هيكل راتب كل موظف
+--   payroll_mast      -- رأس مسير الرواتب
+--   payroll_line      -- تفاصيل مسير الرواتب
+--   leave_type        -- أنواع الإجازات
+--   leave_request     -- طلبات الإجازة
+--   attendance_mast   -- سجل الحضور والغياب
+-- ============================================================
+
+-- ============================================================
+-- 1. department_mast — الأقسام
+-- ============================================================
+create table department_mast
+(
+  dept_i_id       bigint         primary key,
+  agent_i_id      bigint         not null references agent_mast(agent_i_id),
+  dept_c_code     varchar(20)    unique not null,
+  dept_c_name     varchar(100)   not null,
+  dept_c_name_en  varchar(100),
+  -- الرئيس المباشر للقسم
+  manager_emp_id  bigint         references employee_mast(emp_i_id),
+  -- القسم الأب (للأقسام الفرعية)
+  parent_dept_id  bigint         references department_mast(dept_i_id),
+  dept_c_status   varchar(1)     default 'a',  -- a=نشط, i=غير نشط
+  dept_c_notes    varchar(500),
+  created_at      timestamp      default current_timestamp,
+  user_i_id       bigint         references users(user_i_id)
+);
+
+-- ============================================================
+-- 2. designation_mast — المسميات الوظيفية
+-- ============================================================
+create table designation_mast
+(
+  desig_i_id      bigint         primary key,
+  agent_i_id      bigint         not null references agent_mast(agent_i_id),
+  desig_c_code    varchar(20)    not null,
+  desig_c_name    varchar(100)   not null,
+  desig_c_name_en varchar(100),
+  dept_i_id       bigint         references department_mast(dept_i_id),
+  -- درجة الوظيفة (grade)
+  desig_c_grade   varchar(10),
+  -- الحد الأدنى والأقصى للراتب لهذا المسمى
+  desig_f_min_sal numeric(23,5)  default 0,
+  desig_f_max_sal numeric(23,5)  default 0,
+  currency_i_id   bigint         references currency_mast(currency_i_id),
+  desig_c_status  varchar(1)     default 'a',
+  created_at      timestamp      default current_timestamp,
+  user_i_id       bigint         references users(user_i_id),
+  constraint uq_desig unique (agent_i_id, desig_c_code)
+);
+
+-- ============================================================
+-- 3. إضافة حقول للـ employee_mast (alter table)
+-- ============================================================
+-- الجدول موجود مسبقاً في erp_database_schema_fixed.sql
+-- نضيف الحقول الناقصة:
+create table employee_mast (
+  emp_i_id           bigint        primary key,
+  emp_i_seqno        int           not null,
+  agent_i_id         bigint        references agent_mast(agent_i_id),
+  design_i_id        varchar(10),
+  emp_c_name         varchar(100)  not null,
+  emp_c_add1         varchar(100)  not null,
+  emp_c_add2         varchar(100),
+  emp_c_city         varchar(25),
+  country_c_code     varchar(10),
+  emp_d_doj          timestamp     not null,
+  emp_d_confirm      timestamp,
+  emp_d_dob          date,         -- pure date of birth, no time needed
+  emp_c_sex          varchar(1),
+  emp_c_marsts       varchar(1),
+  emp_d_lstincr      timestamp,
+  emp_f_basic        numeric(23,5) not null,
+  emp_f_lstincramt   numeric(23,5),
+  emp_c_eduquali     varchar(25),
+  emp_d_edudate      date,
+  emp_c_pfno         varchar(15),
+  emp_c_esino        varchar(15),
+  emp_d_entry        timestamp,
+  emp_c_status       varchar(1),
+  emp_c_flag         varchar(1),
+  pay_c_confirmsts   varchar(1),
+  pay_c_salsts       varchar(1),
+  pay_c_banktrainsts varchar(1)    default 'n',
+  pay_f_staffsecdep  numeric(23,5) default 0.00,
+  pay_i_heirarchy    int,
+  emp_c_authlevel    varchar(10),
+  emp_i_incrno       int,
+  seq                int,
+  cust_i_oldno       bigint
+  dept_i_id         bigint         references department_mast(dept_i_id),
+  desig_i_id      bigint         references designation_mast(desig_i_id),
+  -- نوع التوظيف: f=دوام كامل, p=دوام جزئي, c=عقد, t=مؤقت
+  emp_c_emp_type  varchar(1)     default 'f',
+  -- الجنسية
+  emp_c_nationality varchar(50),
+  -- رقم الهوية / الإقامة
+  emp_c_id_no     varchar(50),
+  emp_d_id_exp    date,
+  -- رقم جواز السفر
+  emp_c_passport  varchar(30),
+  emp_d_pass_exp  date,
+  -- رقم الحساب البنكي
+  emp_c_bank_acc  varchar(50),
+  emp_c_bank_name varchar(100),
+  -- الراتب الأساسي المعتمد (يُحسب من salary_struct)
+  emp_f_approved_sal numeric(23,5) default 0,
+  currency_i_id   bigint         references currency_mast(currency_i_id),
+  -- المدير المباشر
+  manager_emp_id  bigint         references employee_mast(emp_i_id),
+  -- بريد العمل
+  emp_c_work_email varchar(100),
+  emp_c_mobile    varchar(30),
+  -- صورة الموظف
+  emp_c_photo_path varchar(500)
+);
+alter table users add column emp_i_id bigint references employee_mast(emp_i_id) default 0;
+-- ============================================================
+-- 4. salary_component — مكونات الراتب
+-- ============================================================
+create table salary_component
+(
+  comp_i_id       bigint         primary key,
+  agent_i_id      bigint         not null references agent_mast(agent_i_id),
+  comp_c_code     varchar(20)    not null,
+  comp_c_name     varchar(100)   not null,
+  comp_c_name_en  varchar(100),
+  -- النوع: e=إضافة earning, d=خصم deduction, i=معلومة info
+  comp_c_type     varchar(1)     not null,
+  -- طريقة الحساب: f=ثابت fixed, p=نسبة percentage, a=آلي auto
+  comp_c_calc     varchar(1)     default 'f',
+  -- النسبة (إذا كانت طريقة الحساب نسبة مئوية من الأساسي)
+  comp_f_percent  numeric(5,2)   default 0,
+  -- هل يدخل في حساب gosi/ضريبة؟
+  comp_c_taxable  varchar(1)     default 'n',
+  comp_c_status   varchar(1)     default 'a',
+  comp_i_order    int            default 10,  -- ترتيب العرض
+  created_at      timestamp      default current_timestamp,
+  constraint uq_comp unique (agent_i_id, comp_c_code)
+);
+
+-- ============================================================
+-- 5. salary_struct — هيكل راتب الموظف
+-- ============================================================
+create table salary_struct
+(
+  struct_i_id     bigint         primary key,
+  emp_i_id        bigint         not null references employee_mast(emp_i_id),
+  agent_i_id      bigint         not null references agent_mast(agent_i_id),
+  comp_i_id       bigint         not null references salary_component(comp_i_id),
+  currency_i_id   bigint         not null references currency_mast(currency_i_id),
+  -- القيمة الشهرية لهذا المكون
+  struct_f_amount numeric(23,5)  default 0,
+  -- تاريخ بدء السريان
+  struct_d_from   timestamp      not null,
+  struct_d_to     timestamp,     -- null = لا يزال سارياً
+  struct_c_status varchar(1)     default 'a',
+  created_at      timestamp      default current_timestamp,
+  user_i_id       bigint         references users(user_i_id)
+);
+
+create index idx_struct_emp on salary_struct(emp_i_id, struct_d_from);
+
+-- ============================================================
+-- 6. payroll_mast — رأس مسير الرواتب
+-- ============================================================
+create table payroll_mast
+(
+  pay_i_id        bigint         primary key,
+  agent_i_id      bigint         not null references agent_mast(agent_i_id),
+  -- وصف الدورة: مثل "رواتب مايو 2026"
+  pay_c_desc      varchar(200)   not null,
+  pay_i_year      int            not null,
+  pay_i_month     int            not null,
+  pay_d_from      timestamp      not null,
+  pay_d_to        timestamp      not null,
+  pay_d_payment   timestamp,     -- تاريخ صرف الرواتب
+  currency_i_id   bigint         not null references currency_mast(currency_i_id),
+  -- الإجماليات
+  pay_f_total_earn  numeric(23,5) default 0,  -- إجمالي الاستحقاقات
+  pay_f_total_ded   numeric(23,5) default 0,  -- إجمالي الخصومات
+  pay_f_net_pay     numeric(23,5) default 0,  -- صافي الراتب
+  pay_i_emp_count   int           default 0,  -- عدد الموظفين
+  -- الحالة: d=مسودة, a=معتمد, p=مدفوع, v=ملغى
+  pay_c_status    varchar(1)     default 'd',
+  approved_by     bigint         references users(user_i_id),
+  approved_at     timestamp,
+  -- القيد المحاسبي المولَّد تلقائياً
+  jv_i_id         bigint         references journal_entry(jv_i_id),
+  created_by      bigint         references users(user_i_id),
+  created_at      timestamp      default current_timestamp,
+  constraint uq_payroll unique (agent_i_id, pay_i_year, pay_i_month)
+);
+
+-- ============================================================
+-- 7. payroll_line — تفاصيل مسير الرواتب
+-- ============================================================
+create table payroll_line
+(
+  line_i_id       bigint         primary key,
+  pay_i_id        bigint         not null references payroll_mast(pay_i_id) on delete cascade,
+  emp_i_id        bigint         not null references employee_mast(emp_i_id),
+  comp_i_id       bigint         not null references salary_component(comp_i_id),
+  -- نوع السطر: e=إضافة, d=خصم
+  line_c_type     varchar(1)     not null,
+  line_f_amount   numeric(23,5)  default 0,
+  -- أيام/ساعات العمل الفعلية (للحساب التناسبي)
+  line_f_days     numeric(5,2)   default 30,
+  line_c_notes    varchar(250),
+  created_at      timestamp      default current_timestamp
+);
+
+create index idx_pline_pay_emp on payroll_line(pay_i_id, emp_i_id);
+
+-- ============================================================
+-- 8. leave_type — أنواع الإجازات
+-- ============================================================
+create table leave_type
+(
+  lvt_i_id        bigint         primary key,
+  agent_i_id      bigint         not null references agent_mast(agent_i_id),
+  lvt_c_code      varchar(20)    not null,
+  lvt_c_name      varchar(100)   not null,
+  -- الرصيد السنوي بالأيام
+  lvt_i_annual_days int           default 0,
+  -- هل يُحتسب من الراتب عند تجاوز الرصيد؟
+  lvt_c_paid      varchar(1)     default 'y',
+  lvt_c_status    varchar(1)     default 'a',
+  constraint uq_lvt unique (agent_i_id, lvt_c_code)
+);
+
+-- ============================================================
+-- 9. leave_request — طلبات الإجازة
+-- ============================================================
+create table leave_request
+(
+  lvr_i_id        bigint         primary key,
+  emp_i_id        bigint         not null references employee_mast(emp_i_id),
+  agent_i_id      bigint         not null references agent_mast(agent_i_id),
+  lvt_i_id        bigint         not null references leave_type(lvt_i_id),
+  lvr_d_from      timestamp      not null,
+  lvr_d_to        timestamp      not null,
+  lvr_i_days      numeric(5,2)   not null,
+  lvr_c_reason    varchar(500),
+  -- الحالة: p=معلق, a=موافق, r=مرفوض, c=ملغى
+  lvr_c_status    varchar(1)     default 'p',
+  approved_by     bigint         references employee_mast(emp_i_id),
+  approved_at     timestamp,
+  lvr_c_notes     varchar(500),
+  created_at      timestamp      default current_timestamp
+);
+
+create index idx_lvr_emp on leave_request(emp_i_id, lvr_d_from);
+
+-- ============================================================
+-- 10. attendance_mast — سجل الحضور والغياب
+-- ============================================================
+create table attendance_mast
+(
+  att_i_id        bigint         primary key,
+  emp_i_id        bigint         not null references employee_mast(emp_i_id),
+  agent_i_id      bigint         not null references agent_mast(agent_i_id),
+  att_d_date      date           not null,
+  att_t_in        timestamp,     -- وقت الحضور
+  att_t_out       timestamp,     -- وقت الانصراف
+  -- ساعات العمل الفعلية
+  att_f_hours     numeric(5,2)   default 0,
+  att_f_ot_hours  numeric(5,2)   default 0,  -- ساعات إضافية
+  -- الحالة: p=حاضر, a=غائب, l=إجازة, h=عطلة, e=مأمورية
+  att_c_status    varchar(1)     default 'p',
+  att_c_notes     varchar(250),
+  created_at      timestamp      default current_timestamp,
+  constraint uq_att unique (emp_i_id, att_d_date)
+);
+
+create index idx_att_emp_date on attendance_mast(emp_i_id, att_d_date);
+create index idx_att_agent    on attendance_mast(agent_i_id, att_d_date);
+
+-- ============================================================
+-- view: ملخص راتب كل موظف (آخر هيكل راتب ساري)
+-- ============================================================
+create or replace view v_employee_salary as
+select
+  e.emp_i_id,
+  e.emp_c_name,
+  e.agent_i_id,
+  e.dept_i_id,
+  e.desig_i_id,
+  d.dept_c_name,
+  ds.desig_c_name,
+  -- إجمالي الاستحقاقات
+  sum(case when sc.comp_c_type='e' then s.struct_f_amount else 0 end) as total_earnings,
+  -- إجمالي الخصومات
+  sum(case when sc.comp_c_type='d' then s.struct_f_amount else 0 end) as total_deductions,
+  -- صافي الراتب
+  sum(case when sc.comp_c_type='e' then s.struct_f_amount
+           when sc.comp_c_type='d' then -s.struct_f_amount
+           else 0 end) as net_salary,
+  s.currency_i_id
+from employee_mast e
+left join department_mast  d  on e.dept_i_id  = d.dept_i_id
+left join designation_mast ds on e.desig_i_id = ds.desig_i_id
+left join salary_struct     s  on e.emp_i_id   = s.emp_i_id
+  and s.struct_d_from <= current_timestamp
+  and (s.struct_d_to is null or s.struct_d_to >= current_timestamp)
+  and s.struct_c_status = 'a'
+left join salary_component sc on s.comp_i_id = sc.comp_i_id
+where e.emp_c_status = 'a'
+group by e.emp_i_id, e.emp_c_name, e.agent_i_id,
+         e.dept_i_id, e.desig_i_id,
+         d.dept_c_name, ds.desig_c_name, s.currency_i_id;
+
+-- ============================================================
+-- view: ملخص الحضور الشهري لكل موظف
+-- ============================================================
+create or replace view v_attendance_monthly as
+select
+  a.emp_i_id,
+  a.agent_i_id,
+  extract(year  from a.att_d_date) as att_year,
+  extract(month from a.att_d_date) as att_month,
+  count(*)                          as total_days,
+  sum(case when a.att_c_status='p' then 1 else 0 end) as present_days,
+  sum(case when a.att_c_status='a' then 1 else 0 end) as absent_days,
+  sum(case when a.att_c_status='l' then 1 else 0 end) as leave_days,
+  sum(coalesce(a.att_f_hours,0))   as total_hours,
+  sum(coalesce(a.att_f_ot_hours,0)) as total_ot_hours
+from attendance_mast a
+group by a.emp_i_id, a.agent_i_id,
+         extract(year from a.att_d_date),
+         extract(month from a.att_d_date);
+
+-- ============================================================
+-- end of hr schema
+-- الجداول الجديدة: 9
+-- تعديلات: employee_mast (alter)
+-- الـ views: 2
+-- ============================================================

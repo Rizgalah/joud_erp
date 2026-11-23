@@ -1,0 +1,242 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="jakarta.faces.html"
+      xmlns:f="jakarta.faces.core"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:ui="jakarta.faces.facelets"
+      lang="ar" dir="rtl">
+
+<ui:composition template="/WEB-INF/template.xhtml">
+<ui:define name="pageTitle">#{msg['accounting.exchange.title']}</ui:define>
+
+<ui:define name="extraStyles">
+    <h:outputStylesheet library="css" name="accounting.css"/>
+</ui:define>
+
+<ui:define name="content">
+<h:form id="exForm">
+<p:growl id="msgs" life="4000" showDetail="true"/>
+
+<!-- ══════════════════════════════════════════════
+     لوحة آخر الأسعار المسجَّلة (سريعة)
+══════════════════════════════════════════════ -->
+<div class="joud-card" style="margin-bottom:16px">
+    <div class="joud-card-header">
+        <span class="joud-card-title">
+            <i class="pi pi-sync" style="margin-left:8px;color:#2E75B6"/>
+            آخر الأسعار المسجَّلة
+        </span>
+        <span style="font-size:12px;color:#888">
+            العملة الأساسية: <strong style="color:#1B3A6B">
+                #{exchRateBean.getCurrencyName(exchRateBean.baseCurrencyId)}
+            </strong>
+        </span>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px">
+        <ui:repeat value="#{exchRateBean.latestRates}" var="r">
+            <div class="exrate-mini-card">
+                <p:commandLink action="#{exchRateBean.prefillFromLatest(r[0])}"
+                    update="exForm:entryPanel" style="text-decoration:none;display:block">
+                    <div class="exrate-mini-cur">
+                        #{exchRateBean.getCurrencyName(r[0])}
+                        <span style="color:#888;font-size:11px">#{exchRateBean.getCurrencySymbol(r[0])}</span>
+                    </div>
+                    <div class="exrate-mini-rate">
+                        <h:outputText value="#{r[1]}"><f:convertNumber pattern="#,##0.0000"/></h:outputText>
+                    </div>
+                    <div class="exrate-mini-date">
+                        آخر تحديث:
+                        <h:outputText value="#{r[3]}"><f:convertDateTime pattern="dd/MM/yyyy"/></h:outputText>
+                    </div>
+                </p:commandLink>
+            </div>
+        </ui:repeat>
+
+        <ui:fragment rendered="#{exchRateBean.latestRates.isEmpty()}">
+            <div style="grid-column:1/-1;text-align:center;color:#aaa;font-size:13px;padding:14px">
+                لا توجد أسعار مسجَّلة بعد — أدخل أول سعر صرف أدناه
+            </div>
+        </ui:fragment>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     نموذج إدخال سعر جديد
+══════════════════════════════════════════════ -->
+<div class="joud-card" style="margin-bottom:16px" id="entryPanel">
+    <div class="joud-card-header">
+        <span class="joud-card-title">
+            <i class="pi pi-plus-circle" style="margin-left:8px;color:#2E75B6"/>
+            إدخال / تحديث سعر صرف
+        </span>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));
+                gap:14px;align-items:flex-end">
+
+        <div>
+            <label class="trade-label">العملة *</label>
+            <p:selectOneMenu value="#{exchRateBean.currencyId}" style="width:100%"
+                             filter="true" filterMatchMode="contains">
+                <f:selectItem itemLabel="— اختر العملة —" itemValue="#{null}"/>
+                <f:selectItems value="#{exchRateBean.currencies}"
+                               var="c" itemValue="#{c[0]}" itemLabel="#{c[2]} — #{c[1]}"/>
+            </p:selectOneMenu>
+        </div>
+
+        <div>
+            <label class="trade-label">التاريخ *</label>
+            <p:datePicker value="#{exchRateBean.rateDate}" pattern="dd/MM/yyyy"
+                          style="width:100%" showIcon="true"/>
+        </div>
+
+        <div>
+            <label class="trade-label">نوع السعر</label>
+            <p:selectOneMenu value="#{exchRateBean.rateType}" style="width:100%">
+                <f:selectItem itemLabel="وسط"   itemValue="M"/>
+                <f:selectItem itemLabel="شراء"  itemValue="B"/>
+                <f:selectItem itemLabel="بيع"   itemValue="S"/>
+                <f:selectItem itemLabel="رسمي"  itemValue="O"/>
+            </p:selectOneMenu>
+        </div>
+
+        <div>
+            <label class="trade-label">السعر (مقابل العملة الأساسية) *</label>
+            <p:inputNumber value="#{exchRateBean.rate}" decimalPlaces="6"
+                           style="width:100%" placeholder="0.000000">
+                <p:ajax event="blur" listener="#{exchRateBean.onRateChange}"
+                        update="exForm:inverseFld"/>
+            </p:inputNumber>
+        </div>
+
+        <div>
+            <label class="trade-label">السعر العكسي</label>
+            <p:inputNumber id="inverseFld" value="#{exchRateBean.inverseRate}"
+                           decimalPlaces="6" style="width:100%" placeholder="#{msg['accounting.exchange.auto.calc']}"/>
+        </div>
+
+        <div style="grid-column:span 2">
+            <label class="trade-label">ملاحظات</label>
+            <p:inputText value="#{exchRateBean.notes}" style="width:100%"
+                         placeholder="مصدر السعر، ملاحظات..."/>
+        </div>
+
+        <div style="display:flex;gap:8px">
+            <p:commandButton value="#{msg['btn.save']}" icon="pi pi-check"
+                styleClass="p-button-success" style="flex:1"
+                action="#{exchRateBean.save}"
+                update="exForm" ajax="true"/>
+            <p:commandButton icon="pi pi-times" title="تفريغ"
+                styleClass="p-button-outlined p-button-secondary"
+                action="#{exchRateBean.clearForm}"
+                update="exForm:entryPanel"/>
+        </div>
+
+    </div>
+
+    <div style="margin-top:10px;font-size:11.5px;color:#888">
+        <i class="pi pi-info-circle" style="margin-left:4px"/>
+        إدخال سعر لعملة وتاريخ ونوع مسجَّل مسبقاً يقوم بتحديثه بدلاً من تكراره.
+        اضغط على إحدى بطاقات «آخر الأسعار» أعلاه لتعبئة النموذج تلقائياً بسعر اليوم لتلك العملة.
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     السجل التاريخي
+══════════════════════════════════════════════ -->
+<div class="joud-card">
+    <div class="joud-card-header">
+        <span class="joud-card-title">
+            <i class="pi pi-history" style="margin-left:8px;color:#2E75B6"/>
+            السجل التاريخي
+        </span>
+    </div>
+
+    <!-- فلاتر -->
+    <div style="display:flex;gap:12px;align-items:flex-end;margin-bottom:14px;flex-wrap:wrap">
+
+        <div>
+            <label class="trade-label">العملة</label>
+            <p:selectOneMenu value="#{exchRateBean.filterCurrencyId}" style="width:170px">
+                <f:selectItem itemLabel="كل العملات" itemValue="#{null}"/>
+                <f:selectItems value="#{exchRateBean.currencies}"
+                               var="c" itemValue="#{c[0]}" itemLabel="#{c[1]}"/>
+            </p:selectOneMenu>
+        </div>
+
+        <div>
+            <label class="trade-label">من تاريخ</label>
+            <p:datePicker value="#{exchRateBean.filterFrom}" pattern="dd/MM/yyyy"
+                          style="width:130px" showIcon="true"/>
+        </div>
+
+        <div>
+            <label class="trade-label">إلى تاريخ</label>
+            <p:datePicker value="#{exchRateBean.filterTo}" pattern="dd/MM/yyyy"
+                          style="width:130px" showIcon="true"/>
+        </div>
+
+        <p:commandButton value="#{msg['btn.search']}" icon="pi pi-search"
+            action="#{exchRateBean.search}" update="exForm:histTable" ajax="true"/>
+        <p:commandButton icon="pi pi-refresh" title="تصفية"
+            styleClass="p-button-outlined p-button-secondary"
+            action="#{exchRateBean.resetFilters}" update="exForm:histTable"/>
+
+    </div>
+
+    <p:dataTable id="histTable" value="#{exchRateBean.rateHistory}" var="ex"
+                 styleClass="report-table" rows="20" paginator="true"
+                 emptyMessage="لا توجد أسعار مسجَّلة في الفترة المختارة">
+
+        <p:column headerText="#{msg['accounting.statement.date.from']}" style="width:110px">
+            <h:outputText value="#{ex.rateDate}">
+                <f:convertDateTime pattern="dd/MM/yyyy"/>
+            </h:outputText>
+        </p:column>
+
+        <p:column headerText="#{msg['accounting.exchange.currency']}">
+            <h:outputText value="#{exchRateBean.getCurrencyName(ex.currencyId)}"/>
+        </p:column>
+
+        <p:column headerText="النوع" style="width:80px;text-align:center">
+            <span style="font-size:11px;background:#f0f4f8;padding:2px 8px;
+                         border-radius:10px;color:#555">
+                #{exchRateBean.getRateTypeLabel(ex.rateType)}
+            </span>
+        </p:column>
+
+        <p:column headerText="#{msg['accounting.exchange.rate']}" style="width:140px;direction:ltr;text-align:left">
+            <span style="font-weight:700;color:#1B3A6B">
+                <h:outputText value="#{ex.rate}">
+                    <f:convertNumber pattern="#,##0.000000"/>
+                </h:outputText>
+            </span>
+        </p:column>
+
+        <p:column headerText="#{msg['accounting.exchange.inverse']}" style="width:140px;direction:ltr;text-align:left">
+            <h:outputText value="#{ex.inverseRate}">
+                <f:convertNumber pattern="#,##0.000000"/>
+            </h:outputText>
+        </p:column>
+
+        <p:column headerText="#{msg['accounting.statement.narration']}">
+            <h:outputText value="#{ex.notes != null ? ex.notes : '—'}"/>
+        </p:column>
+
+        <p:column headerText="#{msg['btn.delete']}" style="width:60px;text-align:center">
+            <p:commandButton icon="pi pi-trash"
+                styleClass="p-button-danger p-button-text p-button-sm"
+                action="#{exchRateBean.delete(ex)}"
+                update="exForm:histTable exForm:msgs"
+                onclick="return confirm('حذف هذا السعر؟')"/>
+        </p:column>
+
+    </p:dataTable>
+</div>
+
+</h:form>
+</ui:define>
+</ui:composition>
+</html>

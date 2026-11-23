@@ -1,0 +1,358 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="jakarta.faces.html"
+      xmlns:f="jakarta.faces.core"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:ui="jakarta.faces.facelets"
+      lang="ar" dir="rtl">
+
+<ui:composition template="/WEB-INF/template.xhtml">
+<ui:define name="pageTitle">#{msg['accounting.trial.title']}</ui:define>
+
+<ui:define name="extraStyles">
+    <h:outputStylesheet library="css" name="accounting.css"/>
+</ui:define>
+
+<ui:define name="content">
+<h:form id="reportForm">
+
+<!-- ══════════════════════════════════════════════
+     شريط الفلاتر
+══════════════════════════════════════════════ -->
+<div class="joud-card" style="margin-bottom:16px">
+
+    <!-- أزرار اختيار التقرير -->
+    <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+        <p:commandButton value="#{msg['accounting.trial.title']}"
+            icon="pi pi-list-check"
+            styleClass="#{tbBean.activeReport=='TRIAL'?'p-button-primary':'p-button-outlined'}"
+            action="#{tbBean.onReportChange('TRIAL')}"
+            update="reportForm" ajax="true"/>
+        <p:commandButton value="#{msg['accounting.balance.sheet']}"
+            icon="pi pi-chart-bar"
+            styleClass="#{tbBean.activeReport=='BALANCE_SHEET'?'p-button-primary':'p-button-outlined'}"
+            action="#{tbBean.onReportChange('BALANCE_SHEET')}"
+            update="reportForm" ajax="true"/>
+        <p:commandButton value="#{msg['accounting.income.statement']}"
+            icon="pi pi-dollar"
+            styleClass="#{tbBean.activeReport=='INCOME'?'p-button-primary':'p-button-outlined'}"
+            action="#{tbBean.onReportChange('INCOME')}"
+            update="reportForm" ajax="true"/>
+    </div>
+
+    <!-- فلاتر الفترة والمستوى -->
+    <div style="display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap">
+
+        <div>
+            <label style="font-size:12px;color:#666;display:block;margin-bottom:4px">السنة</label>
+            <p:selectOneMenu value="#{tbBean.year}" style="width:100px">
+                <f:selectItem itemLabel="2024" itemValue="2024"/>
+                <f:selectItem itemLabel="2025" itemValue="2025"/>
+                <f:selectItem itemLabel="2026" itemValue="2026"/>
+            </p:selectOneMenu>
+        </div>
+
+        <div>
+            <label style="font-size:12px;color:#666;display:block;margin-bottom:4px">الشهر</label>
+            <p:selectOneMenu value="#{tbBean.month}" style="width:130px">
+                <f:selectItem itemLabel="يناير"    itemValue="1"/>
+                <f:selectItem itemLabel="فبراير"   itemValue="2"/>
+                <f:selectItem itemLabel="مارس"     itemValue="3"/>
+                <f:selectItem itemLabel="أبريل"    itemValue="4"/>
+                <f:selectItem itemLabel="مايو"     itemValue="5"/>
+                <f:selectItem itemLabel="يونيو"    itemValue="6"/>
+                <f:selectItem itemLabel="يوليو"    itemValue="7"/>
+                <f:selectItem itemLabel="أغسطس"    itemValue="8"/>
+                <f:selectItem itemLabel="سبتمبر"   itemValue="9"/>
+                <f:selectItem itemLabel="أكتوبر"   itemValue="10"/>
+                <f:selectItem itemLabel="نوفمبر"   itemValue="11"/>
+                <f:selectItem itemLabel="ديسمبر"   itemValue="12"/>
+            </p:selectOneMenu>
+        </div>
+
+        <!-- مستوى التجميع — ميزان المراجعة فقط -->
+        <ui:fragment rendered="#{tbBean.activeReport=='TRIAL'}">
+            <div>
+                <label style="font-size:12px;color:#666;display:block;margin-bottom:4px">مستوى التقرير</label>
+                <div class="report-level-tabs">
+                    <button type="button" class="report-level-tab #{tbBean.reportLevel=='AGENT'?'active':''}"
+                        onclick="setLevel('AGENT')">الفرع</button>
+                    <button type="button" class="report-level-tab #{tbBean.reportLevel=='COUNTRY'?'active':''}"
+                        onclick="setLevel('COUNTRY')">البلد</button>
+                    <button type="button" class="report-level-tab #{tbBean.reportLevel=='COMPANY'?'active':''}"
+                        onclick="setLevel('COMPANY')">الشركة</button>
+                </div>
+            </div>
+
+            <!-- اختيار الفرع -->
+            <ui:fragment rendered="#{tbBean.reportLevel=='AGENT'}">
+                <div>
+                    <label style="font-size:12px;color:#666;display:block;margin-bottom:4px">الفرع</label>
+                    <p:selectOneMenu value="#{tbBean.agentId}" style="width:160px">
+                        <f:selectItem itemLabel="— اختر الفرع —" itemValue="#{null}"/>
+                        <f:selectItems value="#{tbBean.agents}"
+                                       var="a" itemValue="#{a[0]}" itemLabel="#{a[1]}"/>
+                    </p:selectOneMenu>
+                </div>
+            </ui:fragment>
+
+            <!-- اختيار البلد -->
+            <ui:fragment rendered="#{tbBean.reportLevel=='COUNTRY'}">
+                <div>
+                    <label style="font-size:12px;color:#666;display:block;margin-bottom:4px">البلد</label>
+                    <p:selectOneMenu value="#{tbBean.countryCode}" style="width:130px">
+                        <f:selectItem itemLabel="— اختر البلد —" itemValue="#{null}"/>
+                        <f:selectItems value="#{tbBean.countries}" var="c" itemLabel="#{c[0]}" itemValue="#{c[0]}"/>
+                    </p:selectOneMenu>
+                </div>
+            </ui:fragment>
+        </ui:fragment>
+
+        <p:commandButton value="#{msg['reports.preview']}" icon="pi pi-search"
+            action="#{tbBean.refresh}" update="reportForm"
+            style="margin-top:auto"/>
+
+        <p:commandButton value="#{msg['btn.pdf']}" icon="pi pi-file-pdf"
+            styleClass="p-button-danger p-button-outlined"
+            action="#{tbBean.exportPdf}" ajax="false"
+            style="margin-top:auto"/>
+
+        <p:commandButton value="#{msg['btn.excel']}" icon="pi pi-file-excel"
+            styleClass="p-button-success p-button-outlined"
+            action="#{tbBean.exportExcel}" ajax="false"
+            style="margin-top:auto"/>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     ميزان المراجعة
+══════════════════════════════════════════════ -->
+<ui:fragment rendered="#{tbBean.activeReport=='TRIAL'}">
+<div class="joud-card">
+    <div class="joud-card-header">
+        <span class="joud-card-title">
+            ميزان المراجعة —
+            #{tbBean.reportLevel=='AGENT'?'مستوى الفرع':tbBean.reportLevel=='COUNTRY'?'مستوى البلد':'مستوى الشركة'}
+            — #{tbBean.getMonthName(tbBean.month)} #{tbBean.year}
+        </span>
+    </div>
+
+    <p:dataTable id="trialTable" value="#{tbBean.trialBalanceData}" var="g"
+                 styleClass="report-table" rows="50" paginator="true"
+                 emptyMessage="لا توجد بيانات للفترة المختارة"
+                 sortField="accountType" sortOrder="1">
+
+        <p:column headerText="#{msg['accounting.trial.account']}" sortBy="#{g.accountType}"
+                  style="width:120px;font-weight:600;color:#1B3A6B">
+            <h:outputText value="#{g.accountType}"/>
+        </p:column>
+
+        <p:column headerText="رصيد الافتتاح" style="width:140px;direction:ltr;text-align:left">
+            <span class="#{g.openingDrCr=='D'?'amt-dr':'amt-cr'}">
+                <h:outputText value="#{g.openingBalance}">
+                    <f:convertNumber pattern="#,##0.00"/>
+                </h:outputText>
+                <small style="font-size:10px;margin-right:4px">
+                    #{g.openingDrCr=='D'?'م':'د'}
+                </small>
+            </span>
+        </p:column>
+
+        <p:column headerText="إجمالي المدين" style="width:140px;direction:ltr;text-align:left">
+            <span class="amt-dr">
+                <h:outputText value="#{g.totalDebit}">
+                    <f:convertNumber pattern="#,##0.00"/>
+                </h:outputText>
+            </span>
+        </p:column>
+
+        <p:column headerText="إجمالي الدائن" style="width:140px;direction:ltr;text-align:left">
+            <span class="amt-cr">
+                <h:outputText value="#{g.totalCredit}">
+                    <f:convertNumber pattern="#,##0.00"/>
+                </h:outputText>
+            </span>
+        </p:column>
+
+        <p:column headerText="رصيد الإغلاق" style="width:150px;direction:ltr;text-align:left">
+            <span class="#{tbBean.getBalanceClass(g)}" style="font-weight:700">
+                <h:outputText value="#{g.closingBalance}">
+                    <f:convertNumber pattern="#,##0.00"/>
+                </h:outputText>
+                <small style="font-size:10px;margin-right:4px">
+                    #{g.closingDrCr=='D'?'م':'د'}
+                </small>
+            </span>
+        </p:column>
+
+        <p:column headerText="بالعملة الأساسية" style="width:150px;direction:ltr;text-align:left">
+            <h:outputText value="#{g.closingBalanceBase}">
+                <f:convertNumber pattern="#,##0.00"/>
+            </h:outputText>
+        </p:column>
+
+        <p:column headerText="ح حركة" style="width:80px;text-align:center">
+            <h:outputText value="#{g.transactionCount}"/>
+        </p:column>
+
+        <!-- صف الإجماليات -->
+        <p:columnGroup type="footer">
+            <p:row>
+                <p:column footerText="الإجمالي" colspan="2" style="text-align:right"/>
+                <p:column style="direction:ltr;text-align:left;color:#1a5276;font-weight:800">
+                    <h:outputText value="#{tbBean.grandTotalDr}">
+                        <f:convertNumber pattern="#,##0.00"/>
+                    </h:outputText>
+                </p:column>
+                <p:column style="direction:ltr;text-align:left;color:#1e8449;font-weight:800">
+                    <h:outputText value="#{tbBean.grandTotalCr}">
+                        <f:convertNumber pattern="#,##0.00"/>
+                    </h:outputText>
+                </p:column>
+                <p:column colspan="3" style="direction:ltr;text-align:left;font-weight:800">
+                    <h:outputText value="#{tbBean.grandTotalBal}">
+                        <f:convertNumber pattern="#,##0.00"/>
+                    </h:outputText>
+                </p:column>
+            </p:row>
+        </p:columnGroup>
+
+    </p:dataTable>
+</div>
+</ui:fragment>
+
+<!-- ══════════════════════════════════════════════
+     الميزانية العمومية
+══════════════════════════════════════════════ -->
+<ui:fragment rendered="#{tbBean.activeReport=='BALANCE_SHEET'}">
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+
+    <!-- الأصول -->
+    <div class="bs-card">
+        <div class="bs-card-header">
+            <i class="pi pi-building" style="margin-left:8px"/> الأصول
+        </div>
+        <div class="bs-card-body">
+            <div class="bs-row">
+                <span>الأصول المتداولة</span>
+                <span class="bs-amount amt-dr">—</span>
+            </div>
+            <div class="bs-row">
+                <span>الأصول الثابتة</span>
+                <span class="bs-amount amt-dr">—</span>
+            </div>
+            <div class="bs-row subtotal">
+                <span>#{msg['accounting.total.assets']}</span>
+                <span class="bs-amount">
+                    <h:outputText value="#{tbBean.totalAssets}">
+                        <f:convertNumber pattern="#,##0.00"/>
+                    </h:outputText>
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- الخصوم وحقوق الملكية -->
+    <div class="bs-card">
+        <div class="bs-card-header">
+            <i class="pi pi-wallet" style="margin-left:8px"/> الخصوم وحقوق الملكية
+        </div>
+        <div class="bs-card-body">
+            <div class="bs-row">
+                <span>الخصوم المتداولة</span>
+                <span class="bs-amount amt-cr">—</span>
+            </div>
+            <div class="bs-row">
+                <span>الخصوم طويلة الأمد</span>
+                <span class="bs-amount amt-cr">—</span>
+            </div>
+            <div class="bs-row subtotal">
+                <span>#{msg['accounting.total.liabilities']}</span>
+                <span class="bs-amount">
+                    <h:outputText value="#{tbBean.totalLiabilities}">
+                        <f:convertNumber pattern="#,##0.00"/>
+                    </h:outputText>
+                </span>
+            </div>
+            <div class="bs-row">
+                <span>رأس المال</span>
+                <span class="bs-amount">—</span>
+            </div>
+            <div class="bs-row subtotal">
+                <span>#{msg['accounting.equity']}</span>
+                <span class="bs-amount">
+                    <h:outputText value="#{tbBean.totalEquity}">
+                        <f:convertNumber pattern="#,##0.00"/>
+                    </h:outputText>
+                </span>
+            </div>
+            <div class="bs-row total">
+                <span>الخصوم + حقوق الملكية</span>
+                <span class="bs-amount">
+                    <h:outputText value="#{tbBean.totalLiabilities.add(tbBean.totalEquity)}">
+                        <f:convertNumber pattern="#,##0.00"/>
+                    </h:outputText>
+                </span>
+            </div>
+        </div>
+    </div>
+
+</div>
+</ui:fragment>
+
+<!-- ══════════════════════════════════════════════
+     قائمة الدخل
+══════════════════════════════════════════════ -->
+<ui:fragment rendered="#{tbBean.activeReport=='INCOME'}">
+<div class="bs-card" style="max-width:700px;margin:0 auto">
+    <div class="bs-card-header">
+        <i class="pi pi-chart-line" style="margin-left:8px"/>
+        قائمة الدخل — #{tbBean.getMonthName(tbBean.month)} #{tbBean.year}
+    </div>
+    <div class="bs-card-body">
+
+        <div class="bs-row">
+            <span style="font-weight:600">الإيرادات الإجمالية</span>
+            <span class="bs-amount amt-cr">
+                <h:outputText value="#{tbBean.totalRevenue}">
+                    <f:convertNumber pattern="#,##0.00"/>
+                </h:outputText>
+            </span>
+        </div>
+
+        <div class="bs-row">
+            <span style="font-weight:600">#{msg['accounting.expenses']}</span>
+            <span class="bs-amount amt-dr">
+                (<h:outputText value="#{tbBean.totalExpenses}">
+                    <f:convertNumber pattern="#,##0.00"/>
+                </h:outputText>)
+            </span>
+        </div>
+
+        <div class="bs-row #{tbBean.netProfitClass}" style="margin-top:8px">
+            <span>#{tbBean.netProfitLabel}</span>
+            <span class="bs-amount" style="font-size:18px">
+                <h:outputText value="#{tbBean.netProfitLoss.abs()}">
+                    <f:convertNumber pattern="#,##0.00"/>
+                </h:outputText>
+            </span>
+        </div>
+
+    </div>
+</div>
+</ui:fragment>
+
+</h:form>
+
+<script>
+function setLevel(level) {
+    // تحديث مستوى التقرير عبر AJAX
+    PrimeFaces.ab({ source:'reportForm:levelInput', event:'change',
+        params:[{name:'level',value:level}] });
+}
+</script>
+
+</ui:define>
+</ui:composition>
+</html>

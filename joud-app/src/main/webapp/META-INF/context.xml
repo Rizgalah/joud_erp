@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    ════════════════════════════════════════════════════════════════
+    Joud ERP — Tomcat Context Configuration
+    الموقع: Tomcat/conf/Catalina/localhost/joud-erp.xml
+         أو داخل WAR: META-INF/context.xml
+    ════════════════════════════════════════════════════════════════
+
+    يعرّف JNDI DataSource لاتصال PostgreSQL مُجمَّع (Connection Pool)
+    يُستخدَم في persistence.xml كبديل للـ JDBC المباشر في الإنتاج.
+
+    خطوات الإعداد:
+    1. عدّل url وusername وpassword
+    2. انسخ هذا الملف إلى: Tomcat/conf/Catalina/localhost/joud-erp.xml
+       (أو ضعه داخل WAR في src/main/webapp/META-INF/context.xml)
+    3. تأكد من وجود postgresql-*.jar في Tomcat/lib/
+-->
+<Context>
+
+    <!-- ════════════════════════════════════════════════
+         PostgreSQL DataSource — Connection Pool
+    ════════════════════════════════════════════════ -->
+    <Resource
+        name="jdbc/JoudDS"
+        auth="Container"
+        type="javax.sql.DataSource"
+        driverClassName="org.postgresql.Driver"
+          url="jdbc:postgresql://localhost:5432/joud_erp?useUnicode=true&amp;characterEncoding=UTF-8"
+        username="postgres"
+        password="sys"
+        maxTotal="20"
+        maxIdle="10"
+        minIdle="3"
+        maxWaitMillis="10000"
+        testOnBorrow="true"
+        validationQuery="SELECT 1"
+        removeAbandonedOnBorrow="true"
+        removeAbandonedTimeout="300"
+        logAbandoned="true"
+    />
+
+    <!-- Weld CDI Manager -->
+    <Manager pathname=""/>
+
+</Context>

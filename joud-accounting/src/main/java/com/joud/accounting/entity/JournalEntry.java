@@ -118,7 +118,10 @@ public class JournalEntry {
     private LocalDateTime createdAt = LocalDateTime.now();
 
     /** أسطر القيد — مرتبطة بـ DAY_LEDG */
-    @OneToMany(mappedBy = "journalEntryId", cascade = CascadeType.ALL, orphanRemoval = true)
+    // DayLedger.journalEntryId حقل Long عادي وليس @ManyToOne، فلا يصح mappedBy عليه.
+    // نربط العمود UTI للقراءة فقط، والكتابة تتم عبر DayLedger.journalEntryId نفسه.
+    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
+    @JoinColumn(name = "UTI", referencedColumnName = "JV_I_ID", insertable = false, updatable = false)
     @OrderBy("id ASC")
     private List<DayLedger> lines = new ArrayList<>();
 

@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<persistence xmlns="https://jakarta.ee/xml/ns/persistence"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xsi:schemaLocation="https://jakarta.ee/xml/ns/persistence
+             https://jakarta.ee/xml/ns/persistence/persistence_3_1.xsd"
+             version="3.1">
+
+    <!--
+        ════════════════════════════════════════════════════════════
+        Joud ERP — Persistence Unit
+        يستخدم Hibernate 6.4.4.Final + PostgreSQL 42.7.3
+        ════════════════════════════════════════════════════════════
+
+        طريقتا الاتصال (اختر واحدة):
+          1. JNDI DataSource (موصى بها في الإنتاج) — تُعرَّف في context.xml
+          2. JDBC مباشر — عدّل خصائص jdbc.* أدناه
+
+        تعليمات الإعداد:
+        ─────────────────
+        1. أنشئ قاعدة البيانات:
+             CREATE DATABASE joud_erp ENCODING 'UTF8';
+        2. نفّذ ملفات SQL بالترتيب:
+             erp_database_schema_fixed.sql
+             accounting_schema.sql
+             hr_schema.sql
+             trade_schema.sql
+             inventory_schema.sql
+        3. عدّل jdbc.url/user/password أدناه
+        4. انسخ joud-erp.war إلى Tomcat/webapps/
+    -->
+
+    <persistence-unit name="JoudERP" transaction-type="RESOURCE_LOCAL">
+
+        <provider>org.hibernate.jpa.HibernatePersistenceProvider</provider>
+
+        <!--
+            ─── خيار 1: JNDI DataSource (موصى به للإنتاج) ───────────
+            أنشئ في Tomcat/conf/context.xml:
+            <Resource name="jdbc/JoudDS"
+                      auth="Container"
+                      type="javax.sql.DataSource"
+                      driverClassName="org.postgresql.Driver"
+                      url="jdbc:postgresql://localhost:5432/joud_erp"
+                      username="joud_user"
+                      password="your_password"
+                      maxTotal="20" maxIdle="10" maxWaitMillis="10000"/>
+        -->
+        <!-- <jta-data-source>java:comp/env/jdbc/JoudDS</jta-data-source> -->
+
+        <!-- ════════════════════════════════════════════════════════
+             تسجيل جميع الكيانات من كل الوحدات
+             (الترتيب لا يهم — Hibernate يفرزها تلقائياً)
+        ════════════════════════════════════════════════════════ -->
+
+        <!-- joud-core -->
+        <class>com.joud.core.security.model.User</class>
+        <class>com.joud.core.security.model.Role</class>
+        <class>com.joud.core.security.model.PasswordResetToken</class>
+
+        <!-- joud-accounting -->
+        <class>com.joud.accounting.entity.ExchangeRateHistory</class>
+        <class>com.joud.accounting.entity.AccountingPeriod</class>
+        <class>com.joud.accounting.entity.GeneralLedgerMaster</class>
+        <class>com.joud.accounting.entity.JournalEntry</class>
+        <class>com.joud.accounting.entity.DayLedger</class>
+
+        <!-- joud-hr -->
+        <class>com.joud.hr.entity.Employee</class>
+        <class>com.joud.hr.entity.Department</class>
+        <class>com.joud.hr.entity.Designation</class>
+        <class>com.joud.hr.entity.SalaryComponent</class>
+        <class>com.joud.hr.entity.SalaryStruct</class>
+        <class>com.joud.hr.entity.PayrollMast</class>
+        <class>com.joud.hr.entity.PayrollLine</class>
+        <class>com.joud.hr.entity.Attendance</class>
+        <class>com.joud.hr.entity.LeaveType</class>
+        <class>com.joud.hr.entity.LeaveRequest</class>
+
+        <!-- joud-trade -->
+        <class>com.joud.trade.entity.Party</class>
+        <class>com.joud.trade.entity.Invoice</class>
+        <class>com.joud.trade.entity.InvoiceItem</class>
+        <class>com.joud.trade.entity.Payment</class>
+
+        <!-- joud-inventory -->
+        <class>com.joud.inventory.entity.Product</class>
+        <class>com.joud.inventory.entity.Warehouse</class>
+        <class>com.joud.inventory.entity.StockCountMast</class>
+        <class>com.joud.inventory.entity.StockCountLine</class>
+
+        <exclude-unlisted-classes>true</exclude-unlisted-classes>
+
+        <properties>
+
+            <!-- ════════════════════════════════════════════════
+                 خيار 2: JDBC مباشر (للتطوير فقط)
+                 عدّل القيم أدناه حسب بيئتك
+            ════════════════════════════════════════════════ -->
+            <property name="jakarta.persistence.jdbc.driver"
+                      value="org.postgresql.Driver"/>
+            <property name="jakarta.persistence.jdbc.url"
+                      value="jdbc:postgresql://localhost:5432/postgres"/>
+            <property name="jakarta.persistence.jdbc.user"
+                      value="postgres"/>
+            <property name="jakarta.persistence.jdbc.password"
+                      value="sys"/>
+                      
+
+            <!-- ════════════════════════════════════════════════
+                 Hibernate Settings
+            ════════════════════════════════════════════════ -->
+            <property name="hibernate.dialect"
+                      value="org.hibernate.dialect.PostgreSQLDialect"/>
+
+            <!-- لا تُعدِّل Schema تلقائياً — الجداول موجودة من SQL -->
+            <property name="hibernate.hbm2ddl.auto"    value="none"/>
+
+            <!-- Connection Pool (C3P0 مدمج في Hibernate) -->
+            <property name="hibernate.connection.pool_size"          value="10"/>
+            <property name="hibernate.c3p0.min_size"                 value="3"/>
+            <property name="hibernate.c3p0.max_size"                 value="20"/>
+            <property name="hibernate.c3p0.timeout"                  value="300"/>
+            <property name="hibernate.c3p0.max_statements"           value="50"/>
+            <property name="hibernate.c3p0.idle_test_period"         value="3000"/>
+
+            <!-- عرض SQL في وضع التطوير — غيّرها إلى false في الإنتاج -->
+            <property name="hibernate.show_sql"                      value="false"/>
+            <property name="hibernate.format_sql"                    value="false"/>
+
+            <!-- ترميز Unicode -->
+            <property name="hibernate.connection.characterEncoding"  value="UTF-8"/>
+            <property name="hibernate.connection.useUnicode"         value="true"/>
+
+            <!-- Batch Size لتحسين الأداء -->
+            <property name="hibernate.jdbc.batch_size"               value="25"/>
+            <property name="hibernate.order_inserts"                 value="true"/>
+            <property name="hibernate.order_updates"                 value="true"/>
+
+            <!-- تجنب N+1 عند استعلام الكيانات المرتبطة -->
+            <property name="hibernate.default_batch_fetch_size"      value="16"/>
+
+            <!-- Transaction Management (RESOURCE_LOCAL مع Hibernate) -->
+            <property name="hibernate.transaction.coordinator_class"
+                      value="jdbc"/>
+            <property name="hibernate.query.validate_queries" value="false"/>       
+            
+
+        </properties>
+
+    </persistence-unit>
+
+</persistence>

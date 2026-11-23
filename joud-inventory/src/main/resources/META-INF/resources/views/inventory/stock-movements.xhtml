@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="jakarta.faces.html"
+      xmlns:f="jakarta.faces.core"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:ui="jakarta.faces.facelets"
+      lang="ar" dir="rtl">
+
+<ui:composition template="/WEB-INF/template.xhtml">
+<ui:define name="pageTitle">#{msg['inventory.movements.title']}</ui:define>
+<ui:define name="extraStyles">
+    <h:outputStylesheet library="css" name="inventory.css"/>
+</ui:define>
+
+<ui:define name="content">
+<h:form id="movForm">
+<p:growl id="msgs" life="4000"/>
+
+<!-- ══ فلاتر البحث ══ -->
+<div class="joud-card" style="margin-bottom:14px">
+    <div style="display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap">
+
+        <div>
+            <label class="inv-label">من تاريخ</label>
+            <p:datePicker id="dateFrom" value="#{movBean.dateFrom}"
+                          pattern="dd/MM/yyyy" style="width:130px" showIcon="true"/>
+        </div>
+
+        <div>
+            <label class="inv-label">إلى تاريخ</label>
+            <p:datePicker id="dateTo" value="#{movBean.dateTo}"
+                          pattern="dd/MM/yyyy" style="width:130px" showIcon="true"/>
+        </div>
+
+        <div>
+            <label class="inv-label">نوع الحركة</label>
+            <p:selectOneMenu value="#{movBean.filterType}" style="width:130px">
+                <f:selectItem itemLabel="الكل"      itemValue=""/>
+                <f:selectItem itemLabel="#{msg['inventory.movement.type.in']} IN"   itemValue="IN"/>
+                <f:selectItem itemLabel="#{msg['inventory.movement.type.out']} OUT"  itemValue="OUT"/>
+                <f:selectItem itemLabel="#{msg['inventory.movement.type.adj']} ADJ" itemValue="ADJ"/>
+                <f:selectItem itemLabel="تحويل TRF" itemValue="TRF"/>
+            </p:selectOneMenu>
+        </div>
+
+        <div style="flex:1;min-width:160px">
+            <label class="inv-label">الصنف</label>
+            <p:selectOneMenu value="#{movBean.filterProductId}" style="width:100%"
+                             filter="true" filterMatchMode="contains">
+                <f:selectItem itemLabel="كل الأصناف" itemValue="#{null}"/>
+                <f:selectItems value="#{prodBean.products}"
+                               var="p" itemValue="#{p.id}"
+                               itemLabel="#{p.code} — #{p.name}"/>
+            </p:selectOneMenu>
+        </div>
+
+        <div>
+            <label class="inv-label">المستودع</label>
+            <p:selectOneMenu value="#{movBean.filterWarehouseId}" style="width:150px">
+                <f:selectItem itemLabel="كل المستودعات" itemValue="#{null}"/>
+                <f:selectItems value="#{prodBean.warehouses}"
+                               var="w" itemValue="#{w[0]}" itemLabel="#{w[1]}"/>
+            </p:selectOneMenu>
+        </div>
+
+        <p:commandButton value="#{msg['btn.search']}" icon="pi pi-search"
+            action="#{movBean.search}"
+            update="movForm:movTable movForm:statCards"
+            ajax="true"/>
+        <p:commandButton value="#{msg['btn.excel']}" icon="pi pi-file-excel"
+            styleClass="p-button-success p-button-outlined"
+            ajax="false"/>
+
+    </div>
+</div>
+
+<!-- ══ بطاقات الإحصاء ══ -->
+<div id="statCards"
+     style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px">
+
+    <div class="joud-card inv-stat" style="border-right:4px solid #0F6E56">
+        <div class="inv-stat-label"><i class="pi pi-arrow-down"/> إجمالي ال#{msg['inventory.movement.type.in']}</div>
+        <div class="inv-stat-val" style="color:#0F6E56;font-size:16px;direction:ltr">
+            <h:outputText value="#{movBean.totalIn}">
+                <f:convertNumber pattern="#,##0.###"/>
+            </h:outputText>
+        </div>
+    </div>
+
+    <div class="joud-card inv-stat" style="border-right:4px solid #e74c3c">
+        <div class="inv-stat-label"><i class="pi pi-arrow-up"/> إجمالي ال#{msg['inventory.movement.type.out']}</div>
+        <div class="inv-stat-val" style="color:#e74c3c;font-size:16px;direction:ltr">
+            <h:outputText value="#{movBean.totalOut}">
+                <f:convertNumber pattern="#,##0.###"/>
+            </h:outputText>
+        </div>
+    </div>
+
+    <div class="joud-card inv-stat" style="border-right:4px solid #2E75B6">
+        <div class="inv-stat-label"><i class="pi pi-sync"/> تسويات</div>
+        <div class="inv-stat-val" style="color:#2E75B6">#{movBean.totalAdj}</div>
+    </div>
+
+    <div class="joud-card inv-stat" style="border-right:4px solid #8e44ad">
+        <div class="inv-stat-label"><i class="pi pi-list"/> عدد الحركات</div>
+        <div class="inv-stat-val" style="color:#8e44ad">#{movBean.movements.size()}</div>
+    </div>
+
+</div>
+
+<!-- ══ جدول الحركات ══ -->
+<div class="joud-card">
+    <p:dataTable id="movTable" value="#{movBean.movements}" var="m"
+                 styleClass="inv-table" rows="25" paginator="true"
+                 paginatorPosition="bottom"
+                 emptyMessage="لا توجد حركات في الفترة المختارة"
+                 sortField="moveDate" sortOrder="-1">
+
+        <p:column headerText="#{msg['accounting.statement.date.from']}" sortBy="#{m[2]}" style="width:110px">
+            <h:outputText value="#{m[2]}">
+                <f:convertDateTime pattern="dd/MM/yyyy"/>
+            </h:outputText>
+        </p:column>
+
+        <p:column headerText="نوع الحركة" style="width:100px;text-align:center">
+            <span class="inv-badge move-#{m[3]}">
+                #{m[3]=='IN'?'#{msg['inventory.movement.type.in']}':m[3]=='OUT'?'#{msg['inventory.movement.type.out']}':m[3]=='ADJ'?'#{msg['inventory.movement.type.adj']}':'تحويل'}
+            </span>
+        </p:column>
+
+        <p:column headerText="كود الصنف" style="width:110px;font-weight:600;color:#2E75B6">
+            <h:outputText value="#{m[4]}"/>
+        </p:column>
+
+        <p:column headerText="#{msg['inventory.product.name']}" sortBy="#{m[5]}">
+            <h:outputText value="#{m[5]}"/>
+        </p:column>
+
+        <p:column headerText="#{msg['inventory.movement.warehouse']}" style="width:130px">
+            <h:outputText value="#{m[6] != null ? m[6] : '—'}"/>
+        </p:column>
+
+        <p:column headerText="#{msg['inventory.movement.qty']}" style="width:100px;direction:ltr;text-align:left">
+            <span style="font-weight:700;
+                color:#{m[3]=='IN'?'#0F6E56':m[3]=='OUT'?'#e74c3c':'#2E75B6'}">
+                #{m[3]=='OUT'?'-':''}
+                <h:outputText value="#{m[7]}">
+                    <f:convertNumber pattern="#,##0.###"/>
+                </h:outputText>
+            </span>
+        </p:column>
+
+        <p:column headerText="قبل" style="width:100px;direction:ltr;text-align:left">
+            <span style="color:#888">
+                <h:outputText value="#{m[8]}">
+                    <f:convertNumber pattern="#,##0.###"/>
+                </h:outputText>
+            </span>
+        </p:column>
+
+        <p:column headerText="بعد" style="width:100px;direction:ltr;text-align:left">
+            <span style="font-weight:600;color:#1B3A6B">
+                <h:outputText value="#{m[9]}">
+                    <f:convertNumber pattern="#,##0.###"/>
+                </h:outputText>
+            </span>
+        </p:column>
+
+        <p:column headerText="التكلفة" style="width:110px;direction:ltr;text-align:left">
+            <h:outputText value="#{m[10]}">
+                <f:convertNumber pattern="#,##0.00"/>
+            </h:outputText>
+        </p:column>
+
+        <p:column headerText="#{msg['inventory.movement.value']}" style="width:120px;direction:ltr;text-align:left">
+            <span style="font-weight:700;color:#1B3A6B">
+                <h:outputText value="#{m[11]}">
+                    <f:convertNumber pattern="#,##0.00"/>
+                </h:outputText>
+            </span>
+        </p:column>
+
+        <p:column headerText="فاتورة / ملاحظة">
+            <h:outputText value="#{m[12] != null ? m[12] : (m[13] != null ? m[13] : '—')}"/>
+        </p:column>
+
+    </p:dataTable>
+</div>
+
+</h:form>
+</ui:define>
+</ui:composition>
+</html>

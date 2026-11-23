@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="jakarta.faces.html"
+      xmlns:f="jakarta.faces.core"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:ui="jakarta.faces.facelets"
+      lang="ar" dir="rtl">
+
+<ui:composition template="/WEB-INF/template.xhtml">
+<ui:define name="pageTitle">#{msg['reports.title']}</ui:define>
+
+<ui:define name="extraStyles">
+    <h:outputStylesheet library="css" name="reports.css"/>
+</ui:define>
+
+<ui:define name="content">
+<h:form id="repForm">
+<p:growl id="msgs" life="4000" showDetail="true"/>
+
+<div style="display:grid;grid-template-columns:320px 1fr;gap:16px">
+
+    <!-- ══════════════════════════════════════════
+         يمين: قائمة التقارير مجمَّعة حسب الوحدة
+    ══════════════════════════════════════════ -->
+    <div class="joud-card" style="padding:0;align-self:start">
+        <div class="joud-card-header" style="padding:14px 16px">
+            <span class="joud-card-title">
+                <i class="pi pi-chart-bar" style="margin-left:8px;color:#2E75B6"/>
+                التقارير المتاحة
+            </span>
+        </div>
+
+        <ui:repeat value="#{reportsBean.reportsByModule.keySet().toArray()}" var="modId">
+            <div class="rep-module-group">
+                <div class="rep-module-title">#{reportsBean.getModuleLabel(modId)}</div>
+                <ui:repeat value="#{reportsBean.reportsByModule.get(modId)}" var="def">
+                    <p:commandLink action="#{reportsBean.selectReport(def)}"
+                        update="repForm:paramDialog"
+                        oncomplete="PF('paramDlg').show()"
+                        styleClass="rep-item #{reportsBean.selected==def?'rep-item-active':''}">
+                        <i class="pi pi-file" style="margin-left:8px"/>
+                        #{def.titleKey}
+                    </p:commandLink>
+                </ui:repeat>
+            </div>
+        </ui:repeat>
+
+        <ui:fragment rendered="#{reportsBean.reportsByModule.isEmpty()}">
+            <div style="text-align:center;padding:30px;color:#aaa;font-size:13px">
+                #{msg['reports.no.reports']}
+            </div>
+        </ui:fragment>
+    </div>
+
+    <!-- ══════════════════════════════════════════
+         يسار: المعاينة والنتائج
+    ══════════════════════════════════════════ -->
+    <div>
+        <ui:fragment rendered="#{reportsBean.selected == null}">
+            <div class="joud-card" style="text-align:center;padding:60px">
+                <i class="pi pi-arrow-right" style="font-size:40px;color:#d0d9e8;display:block;margin-bottom:14px"/>
+                <p style="color:#aaa;font-size:14px">#{msg['reports.select.prompt']}</p>
+            </div>
+        </ui:fragment>
+
+        <ui:fragment rendered="#{reportsBean.selected != null}">
+            <div class="joud-card">
+                <div class="joud-card-header">
+                    <span class="joud-card-title">
+                        <i class="pi pi-file" style="margin-left:8px;color:#2E75B6"/>
+                        #{reportsBean.selected.titleKey}
+                    </span>
+                    <div style="display:flex;gap:8px">
+                        <p:commandButton value="#{msg['reports.preview']}" icon="pi pi-eye"
+                            styleClass="p-button-outlined"
+                            action="#{reportsBean.runPreview}"
+                            update="repForm:previewPanel repForm:msgs"
+                            ajax="true"/>
+                        <p:commandButton value="#{msg['btn.pdf']}" icon="pi pi-file-pdf"
+                            styleClass="p-button-danger p-button-outlined"
+                            action="#{reportsBean.exportPdf}" ajax="false"/>
+                        <p:commandButton value="#{msg['btn.excel']}" icon="pi pi-file-excel"
+                            styleClass="p-button-success p-button-outlined"
+                            action="#{reportsBean.exportExcel}" ajax="false"/>
+                    </div>
+                </div>
+
+                <!-- ─── نتائج المعاينة ─── -->
+                <div id="previewPanel">
+                <ui:fragment rendered="#{reportsBean.hasPreview}">
+                    <p:dataTable value="#{reportsBean.previewRows}" var="row"
+                                 styleClass="report-table" rows="20" paginator="true"
+                                 emptyMessage="#{msg['msg.no.data']}">
+
+                        <p:columns value="#{reportsBean.previewColumns}" var="col"
+                                   headerText="#{col.header}">
+                            <h:outputText value="#{row[col.index]}">
+                                <f:convertNumber type="number" pattern="#,##0.##"
+                                    rendered="#{row[col.index] instanceof java.math.BigDecimal}"/>
+                            </h:outputText>
+                        </p:columns>
+
+                        <p:columnGroup type="footer" rendered="#{reportsBean.totalsRow != null}">
+                            <p:row>
+                                <ui:repeat value="#{reportsBean.previewColumns}" var="col">
+                                    <p:column footerText="#{reportsBean.totalsRow[col.index]}"/>
+                                </ui:repeat>
+                            </p:row>
+                        </p:columnGroup>
+
+                    </p:dataTable>
+                </ui:fragment>
+
+                <ui:fragment rendered="#{!reportsBean.hasPreview}">
+                    <div style="text-align:center;padding:40px;color:#aaa;font-size:13px">
+                        #{msg['reports.select.prompt']}
+                    </div>
+                </ui:fragment>
+                </div>
+            </div>
+        </ui:fragment>
+    </div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════
+     Dialog: #{msg['reports.params.title']}
+══════════════════════════════════════════════ -->
+<p:dialog id="paramDialog" header="#{msg['reports.params.title']}"
+          widgetVar="paramDlg" modal="true" style="width:460px"
+          visible="#{reportsBean.showParamDialog}">
+
+    <ui:fragment rendered="#{reportsBean.selected != null}">
+        <div style="display:grid;gap:14px;padding:6px">
+
+            <div style="font-size:14px;font-weight:700;color:#1B3A6B;margin-bottom:4px">
+                #{reportsBean.selected.titleKey}
+            </div>
+
+            <ui:repeat value="#{reportsBean.selected.parameters}" var="p">
+                <div>
+                    <label class="rep-label">
+                        #{p.labelKey}
+                        <span style="color:#e74c3c" rendered="#{p.required}">*</span>
+                    </label>
+
+                    <!-- DATE -->
+                    <p:datePicker rendered="#{p.type.toString()=='DATE'}"
+                        value="#{reportsBean.paramValues[p.key]}"
+                        pattern="dd/MM/yyyy" style="width:100%" showIcon="true"/>
+
+                    <!-- STRING -->
+                    <p:inputText rendered="#{p.type.toString()=='STRING'}"
+                        value="#{reportsBean.paramValues[p.key]}" style="width:100%"/>
+
+                    <!-- NUMBER -->
+                    <p:inputNumber rendered="#{p.type.toString()=='NUMBER'}"
+                        value="#{reportsBean.paramValues[p.key]}" style="width:100%"/>
+
+                    <!-- BOOLEAN -->
+                    <p:selectBooleanCheckbox rendered="#{p.type.toString()=='BOOLEAN'}"
+                        value="#{reportsBean.paramValues[p.key]}"/>
+
+                </div>
+            </ui:repeat>
+
+            <ui:fragment rendered="#{reportsBean.selected.parameters.isEmpty()}">
+                <div style="color:#888;font-size:13px;text-align:center;padding:10px">
+                    #{msg['reports.no.params']}
+                </div>
+            </ui:fragment>
+
+        </div>
+    </ui:fragment>
+
+    <f:facet name="footer">
+        <div style="display:flex;gap:8px;justify-content:flex-end">
+            <p:commandButton value="#{msg['reports.preview']}" icon="pi pi-eye"
+                styleClass="p-button-success"
+                action="#{reportsBean.runPreview}"
+                update="repForm:previewPanel repForm:msgs"
+                oncomplete="PF('paramDlg').hide()"/>
+            <p:commandButton value="#{msg['btn.close']}" icon="pi pi-times"
+                styleClass="p-button-outlined p-button-secondary"
+                action="#{reportsBean.closeDialog}"
+                onclick="PF('paramDlg').hide()"/>
+        </div>
+    </f:facet>
+
+</p:dialog>
+
+</h:form>
+</ui:define>
+</ui:composition>
+</html>

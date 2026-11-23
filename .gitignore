@@ -1,0 +1,543 @@
+# ============================================
+# Joud ERP - Comprehensive .gitignore
+# ============================================
+
+# ==========================================
+# IDE and Editor Configuration
+# ==========================================
+
+# IntelliJ IDEA
+.idea/
+.idea_modules/
+*.iml
+*.iws
+*.ipr
+*.jks
+*.keystore
+
+# Visual Studio Code
+.vscode/
+*.code-workspace
+.history/
+
+# Eclipse
+.classpath
+.project
+.c9/
+*.launch
+.settings/
+.factorypath
+.apt_generated/
+.apt_generated_tests/
+
+# NetBeans
+nbproject/
+.nb-gradle/
+.netbeans
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# vim
+.vim/
+*.swp
+*.swo
+*~
+.vimrc
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+
+# Windows
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# Linux
+.nfs*
+
+# ==========================================
+# Build and Compilation Output
+# ==========================================
+
+# Maven
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+release.properties
+.flattened-pom.xml
+.mvn/
+mvnw
+mvnw.cmd
+.mvn/wrapper/maven-wrapper.jar
+.mvn/wrapper/maven-wrapper.properties
+.mvn/wrapper/maven-wrapper.log
+
+# Gradle
+.gradle/
+gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+gradlew
+gradlew.bat
+.gradletasknamecache
+
+# Ant
+bin/
+build/
+
+# Compiled Files
+*.class
+*.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
+*.7z
+
+# Generated Sources
+generated/
+generated-sources/
+generated-test-sources/
+
+# ==========================================
+# Dependency Management
+# ==========================================
+
+# Local Maven Installation
+.maven/
+.maven/**
+
+# Local Gradle Installation
+.gradle/
+
+# Node Modules (if using frontend tools)
+node_modules/
+npm-debug.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+yarn.lock
+package-lock.json
+
+# Python Virtual Environments
+venv/
+env/
+ENV/
+.venv
+__pycache__/
+*.py[cod]
+*$py.class
+
+# ==========================================
+# IDE Run Configurations
+# ==========================================
+
+.run/
+run_configs/
+
+# ==========================================
+# Logging and Output
+# ==========================================
+
+# Logs
+logs/
+*.log
+*.log.*
+log.txt
+out.txt
+error.log
+
+# Application Logs
+application.log
+application-*.log
+catalina.out
+catalina.*.log
+
+# Test Logs
+surefire-reports/
+failsafe-reports/
+test-results/
+test-output/
+
+# ==========================================
+# Database Files
+# ==========================================
+
+# Local Databases
+*.db
+*.sqlite
+*.sqlite3
+*.h2.db
+*.ldf
+*.mdf
+*.ibd
+*.frm
+
+# Database Backups
+db-backup/
+*.sql.backup
+*.sql.bak
+*.dump
+
+# ==========================================
+# Coverage and Testing
+# ==========================================
+
+# Code Coverage
+coverage/
+.coverage
+.coverage.*
+htmlcov/
+.nyc_output/
+.nycrc*
+coverage.xml
+*.lcov
+
+# Test Reports
+junit.xml
+cobertura.xml
+jacoco.xml
+
+# Spotbugs
+.spotbugs/
+spotbugs-results.html
+
+# SonarQube
+.sonarqube/
+.sonar/
+.sonarscan/
+
+# Checkstyle
+checkstyle-cachefile
+checkstyle-results.xml
+
+# ==========================================
+# Environment and Configuration
+# ==========================================
+
+# Environment Files
+.env
+.env.local
+.env.*.local
+.env.production.local
+
+# Configuration Files (Local)
+config.local.xml
+config.local.properties
+application-local.yml
+application-local.yaml
+application-dev.properties
+persistence-local.xml
+
+# Secrets
+.credentials
+.secrets
+secrets.properties
+private.key
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+
+# ==========================================
+# Temporary Files
+# ==========================================
+
+# Temp Directories
+tmp/
+temp/
+temp-*/
+temporary/
+
+# Backup Files
+*.bak
+*.backup
+*.old
+*.orig
+*~
+*.swp
+*.swo
+
+# OS Temporary Files
+*.tmp
+.tmp*
+.temp*
+
+# ==========================================
+# Build Artifacts
+# ==========================================
+
+dist/
+out/
+build-artifacts/
+.ant-targets-build.xml
+
+# ==========================================
+# Docker and Kubernetes
+# ==========================================
+
+.docker/
+.dockerignore
+docker-compose.local.yml
+kubernetes-local/
+k8s-local/
+
+# ==========================================
+# CI/CD and Version Control
+# ==========================================
+
+# GitHub Actions Secrets
+.github/workflows/secrets/
+.github/workflows/*.local.yml
+
+# GitLab CI
+.gitlab-ci.local.yml
+
+# Travis CI
+.travis.yml.local
+
+# CircleCI
+.circleci/local/
+
+# ==========================================
+# Backup and Archive Folders
+# ==========================================
+
+# Backup Directories
+backup/
+backup-*/
+old-code/
+archives/
+_backup/
+
+# ==========================================
+# Documentation Generated Files
+# ==========================================
+
+# JavaDoc
+javadoc/
+docs/generated/
+site/
+
+# Markdown generated
+*.md.bak
+
+# ==========================================
+# JetBrains Specific
+# ==========================================
+
+.idea/
+*.iml
+*.iws
+*.ipr
+.idea_modules/
+*.idea
+.jb/
+.jbignore
+
+# ==========================================
+# Application Server Specific
+# ==========================================
+
+# Tomcat
+tomcat-local/
+server-local/
+apache-tomcat-10.1.57/
+catalina.out
+*.pid
+
+# JBoss/WildFly
+jboss-local/
+wildfly-local/
+deployments-local/
+
+# ==========================================
+# Debugging and Profiling
+# ==========================================
+
+# Debugging Files
+.debug
+*.debug
+debug.log
+
+# Profiling
+*.jfr
+*.hprof
+profile-results/
+
+# ==========================================
+# Selenium and WebDriver
+# ==========================================
+
+selenium-debug.log
+geckodriver.log
+chromedriver
+geckodriver
+msedgedriver
+
+# WebDriver Logs
+webdriver-*.log
+
+# ==========================================
+# Plugin and Extension Cache
+# ==========================================
+
+.plugins/
+.plugin-cache/
+.cache/
+
+# ==========================================
+# Generated/Excluded Source Code
+# ==========================================
+
+# Lombok
+out/
+.lombok-output/
+
+# MapStruct
+.generated-mappers/
+
+# Spotless
+.spotless.tmp/
+
+# ==========================================
+# Virtual Machines and Containers
+# ==========================================
+
+# Virtual Machine Images
+*.iso
+*.dmg
+*.img
+
+# Container Artifacts
+.container/
+container-*.tar
+
+# ==========================================
+# Archive and Large Files
+# ==========================================
+
+# Archives (KEEP jar and war)
+*.zip.bak
+*.tar.gz.bak
+
+# Large Files
+*.tar
+large-files/
+
+# ==========================================
+# Project Specific - Joud ERP
+# ==========================================
+
+# Generated Reports
+reports/
+reports-generated/
+
+# Database Schema Files (Local)
+schema-local/
+schema-backup/
+
+# Test Data
+test-data/
+test-data-*.sql
+
+# Local Tomcat Instance
+tomcat-instance/
+tomcat-logs/
+
+# Module Build Output
+joud-core/target/
+joud-accounting/target/
+joud-hr/target/
+joud-trade/target/
+joud-inventory/target/
+joud-dashboard/target/
+joud-notification/target/
+joud-app/target/
+
+# Module IDEs
+joud-*/.idea/
+joud-*/.vscode/
+
+# ==========================================
+# Miscellaneous
+# ==========================================
+
+# Various temp extensions
+*.class.bak
+*.lst
+*.ctxt
+
+# Local development scripts
+local-*.sh
+local-*.bat
+local-*.ps1
+
+# Patch Files
+*.patch
+*.diff
+
+# Merge/Conflict Resolution
+*.orig
+*.CONFLICT
+
+# Version Backup
+.previous-version/
+
+
+
+# ==========================================
+# END OF .gitignore
+# ==========================================
+/.metadata/
+# ==========================================
+# قواعد الحصر للنسخ الاحتياطي (Whitelist)
+# ==========================================
+
+# تجاهل مجلدات الأدوات والسيرفرات المدمجة داخل المشروع
+*tomcat*/
+*maven*/
+.mvn/
+.vscode/
+.settings/
+.metadata/
+.project
+.classpath
+
+# ضمان السماح فقط بهيكلية المشروع الأساسية (src و pom.xml)
+!pom.xml
+!*/pom.xml
+!src/
+!src/**
+!*/src/
+!*/src/**
+!.gitignore
+!README.md
+# ==========================================
+# استبعاد الملفات الجانبية والسكربتات المؤقتة
+# ==========================================
+*.docx
+*.py
+Test.java
+"Json script.txt"
+Json script.txt
+i18n-architecture-plan.md.md
+DEPLOYMENT-README.md
+Git_Guide_AR.md
+joud-build.ps1
+password_reset_tokens.sql
+index.xhtml
+docs/
+

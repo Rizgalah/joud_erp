@@ -1,427 +1,504 @@
 -- ============================================================
--- Joud ERP — joud-accounting Plugin Schema
+-- joud erp — joud-accounting plugin schema
 -- الجداول الجديدة والمُحسَّنة لوحدة المحاسبة
 -- ============================================================
 -- الجداول الجديدة:
---   GENLDG_MAST    -- الأرصدة التراكمية (قلب التقارير الختامية)
---   EXCH_RATE_HIST -- تاريخ أسعار الصرف (متعدد العملات)
+--   genldg_mast    -- الأرصدة التراكمية (قلب التقارير الختامية)
+--   exch_rate_hist -- تاريخ أسعار الصرف (متعدد العملات)
 -- الجداول المنقولة من القلب إلى هذه الوحدة:
---   DAY_LEDG, BATCH, TREASURY_TRANSACTIONS, STOCK_MOVEMENTS
+--   day_ledg, batch, treasury_transactions, stock_movements
 -- ============================================================
 
 -- ============================================================
--- 1. EXCH_RATE_HIST — تاريخ أسعار الصرف
+-- 1. exch_rate_hist — تاريخ أسعار الصرف
 -- ============================================================
--- يحفظ سعر كل عملة مقابل العملة الأساسية (BASE) يومياً.
+-- يحفظ سعر كل عملة مقابل العملة الأساسية (base) يومياً.
 -- يُستخدم في:
 --   - تحويل أرصدة الفروع الخارجية عند التجميع
 --   - إعادة تقييم العملة الأجنبية في نهاية الفترة
---   - حساب فروق العملة (Forex Gain/Loss)
+--   - حساب فروق العملة (forex gain/loss)
 -- ============================================================
-CREATE TABLE EXCH_RATE_HIST
+-- ============================================================
+-- group: application data model - accounting
+-- ============================================================
+create table ledger_group (
+  group_i_id bigint primary key,
+  group_c_desc varchar(100) not null,
+  group_c_type varchar(1) not null,
+  balance_c_type varchar(1) not null,
+  group_c_other varchar(10),
+  group_i_sequence int,
+  user_i_id bigint references users(user_i_id)
+);
+create table mainldg_mast (
+  ldg_i_id bigint primary key,
+  group_i_id bigint references ledger_group(group_i_id),
+  ldg_c_desc varchar(100) not null,
+  user_i_id bigint references users(user_i_id)
+);
+create table subldg_mast (
+  sub_i_id bigint primary key,
+  ldg_i_id bigint references mainldg_mast(ldg_i_id),
+  sub_c_ldgdesc varchar(100) not null,
+  sub_c_type varchar(1) not null,
+  sub_c_revalid varchar(1) not null,
+  group_i_id bigint references ledger_group(group_i_id),
+  act_c_type varchar(10) not null,
+  profit_c_calc varchar(1),
+  act_c_class varchar(10),
+  act_c_nature varchar(10),
+  bud_c_flag varchar(1),
+  user_i_id bigint references users(user_i_id)
+);
+create table account_mast (
+  act_i_id bigint primary key,
+  sub_i_id bigint references subldg_mast(sub_i_id),
+  agent_i_id bigint references agent_mast(agent_i_id),
+  act_c_type varchar(10),
+  cust_i_no bigint not null,
+  currency_i_id bigint references currency_mast(currency_i_id),
+  act_c_name varchar(250) not null,
+  cust_c_mname varchar(250),
+  act_d_opdate timestamp not null,
+  act_c_actsts varchar(1) default 'a',
+  act_c_odsts varchar(1) default 'y',
+  act_i_introid bigint,
+  act_i_trbrcode bigint,
+  act_d_closdt timestamp,
+  closure_c_reason varchar(250),
+  act_c_payflag varchar(1),
+  intro_c_rem varchar(100),
+  modify_i_by bigint references users(user_i_id),
+  auth_i_by bigint references users(user_i_id),
+  auth_d_date timestamp,
+  act_i_kyc bigint,
+  parties_i_id bigint references parties(parties_i_id),
+  emp_i_id bigint references employee_mast(emp_i_id),
+  user_i_id bigint references users(user_i_id)
+);
+create table sbbal_mast (
+  sbbal_i_id bigint primary key,
+  act_i_id bigint references account_mast(act_i_id),
+  agent_i_id bigint references agent_mast(agent_i_id),
+  act_c_type varchar(10),
+  cust_i_no bigint,
+  currency_i_id bigint references currency_mast(currency_i_id),
+  sb_f_clrbal numeric(23, 5),
+  sb_f_shabal numeric(23, 5),
+  sb_f_rsvbal numeric(23, 5),
+  sb_f_odbal numeric(23, 5),
+  sb_d_odsts timestamp,
+  sb_d_trndate timestamp,
+  sb_i_notran int,
+  sb_f_intrate numeric(23, 5),
+  sb_f_freezeamt numeric(23, 5),
+  sb_f_releamt numeric(23, 5),
+  cust_i_oldno bigint
+);
+create table exch_rate_hist
 (
-  EXCH_I_ID          NUMBER(30)    PRIMARY KEY,
-  -- العملة المصدر (مثلاً USD, EUR, SAR)
-  CURRENCY_I_ID      NUMBER(30)    NOT NULL REFERENCES CURRENCY_MAST(CURRENCY_I_ID),
-  -- العملة الأساسية للشركة (مثلاً USD إذا كانت الرئاسة أمريكية)
-  BASE_CURRENCY_I_ID NUMBER(30)    NOT NULL REFERENCES CURRENCY_MAST(CURRENCY_I_ID),
+  exch_i_id          number(30)    primary key,
+  -- العملة المصدر (مثلاً usd, eur, sar)
+  currency_i_id      number(30)    not null references currency_mast(currency_i_id),
+  -- العملة الأساسية للشركة (مثلاً usd إذا كانت الرئاسة أمريكية)
+  base_currency_i_id number(30)    not null references currency_mast(currency_i_id),
   -- الفرع المعني (كل فرع قد يملك عملته المحلية)
-  AGENT_I_ID         NUMBER(30)    REFERENCES AGENT_MAST(AGENT_I_ID),
-  -- نوع السعر: B=شراء Buy, S=بيع Sell, M=وسط Middle, O=رسمي Official
-  EXCH_C_RATE_TYPE   CHAR(1)       NOT NULL DEFAULT 'M',
+  agent_i_id         number(30)    references agent_mast(agent_i_id),
+  -- نوع السعر: b=شراء buy, s=بيع sell, m=وسط middle, o=رسمي official
+  exch_c_rate_type   char(1)       not null default 'm',
   -- تاريخ السعر
-  EXCH_D_DATE        DATE          NOT NULL,
-  -- سعر الصرف (1 وحدة من العملة = X وحدة من العملة الأساسية)
-  EXCH_F_RATE        NUMBER(23,8)  NOT NULL,
-  -- السعر العكسي (1 وحدة أساسية = X وحدة من العملة)
-  EXCH_F_INVERSE     NUMBER(23,8),
-  -- مصدر السعر: M=يدوي Manual, A=تلقائي Auto/API
-  EXCH_C_SOURCE      CHAR(1)       DEFAULT 'M',
-  EXCH_C_NOTES       VARCHAR2(250),
-  EXCH_D_ENTRY       DATE          DEFAULT SYSDATE,
-  user_i_id          NUMBER(30)    REFERENCES users(user_i_id),
+  exch_d_date        date          not null,
+  -- سعر الصرف (1 وحدة من العملة = x وحدة من العملة الأساسية)
+  exch_f_rate        number(23,8)  not null,
+  -- السعر العكسي (1 وحدة أساسية = x وحدة من العملة)
+  exch_f_inverse     number(23,8),
+  -- مصدر السعر: m=يدوي manual, a=تلقائي auto/api
+  exch_c_source      char(1)       default 'm',
+  exch_c_notes       varchar2(250),
+  exch_d_entry       date          default sysdate,
+  user_i_id          number(30)    references users(user_i_id),
   -- منع تكرار سعر نفس العملة في نفس اليوم لنفس النوع
-  CONSTRAINT uq_exch_rate UNIQUE (CURRENCY_I_ID, BASE_CURRENCY_I_ID, EXCH_D_DATE, EXCH_C_RATE_TYPE, AGENT_I_ID)
+  constraint uq_exch_rate unique (currency_i_id, base_currency_i_id, exch_d_date, exch_c_rate_type, agent_i_id)
 );
 
-CREATE INDEX idx_exch_date     ON EXCH_RATE_HIST(EXCH_D_DATE);
-CREATE INDEX idx_exch_currency ON EXCH_RATE_HIST(CURRENCY_I_ID, BASE_CURRENCY_I_ID);
+create index idx_exch_date     on exch_rate_hist(exch_d_date);
+create index idx_exch_currency on exch_rate_hist(currency_i_id, base_currency_i_id);
 
 -- ============================================================
--- 2. GENLDG_MAST — الأرصدة التراكمية (General Ledger Master)
+-- 2. genldg_mast — الأرصدة التراكمية (general ledger master)
 -- ============================================================
 -- القلب الفعلي لاستخراج التقارير الختامية.
--- يُحدَّث تلقائياً عند كل قيد في DAY_LEDG أو BATCH.
+-- يُحدَّث تلقائياً عند كل قيد في day_ledg أو batch.
 -- يحتفظ بـ:
 --   - رصيد افتتاح الفترة
 --   - إجمالي المدين والدائن خلال الفترة
 --   - رصيد الإغلاق بعملة الحساب
 --   - رصيد الإغلاق بالعملة الأساسية (للتجميع)
 -- ============================================================
-CREATE TABLE GENLDG_MAST
+create table genldg_mast
 (
-  GEN_I_ID            NUMBER(30)    PRIMARY KEY,
+  gen_i_id            number(30)    primary key,
   -- الحساب المعني
-  ACT_I_ID            NUMBER(30)    NOT NULL REFERENCES ACCOUNT_MAST(ACT_I_ID),
-  ACT_C_TYPE          VARCHAR2(10)  NOT NULL REFERENCES ACCOUNT_MAST(ACT_C_TYPE),
+  act_i_id            number(30)    not null references account_mast(act_i_id),
+  act_c_type          varchar2(10)  not null references account_mast(act_c_type),
   -- الفرع والبلد
-  AGENT_I_ID          NUMBER(30)    NOT NULL REFERENCES AGENT_MAST(AGENT_I_ID),
+  agent_i_id          number(30)    not null references agent_mast(agent_i_id),
   -- البلد (لتجميع التقارير على مستوى البلد)
-  COUNTRY_C_CODE      VARCHAR2(10)  NOT NULL,
+  country_c_code      varchar2(10)  not null,
   -- الفترة المحاسبية: السنة والشهر
-  GEN_I_YEAR          NUMBER(4)     NOT NULL,
-  GEN_I_MONTH         NUMBER(2)     NOT NULL,  -- 0 = رصيد افتتاح السنة
+  gen_i_year          number(4)     not null,
+  gen_i_month         number(2)     not null,  -- 0 = رصيد افتتاح السنة
   -- عملة الحساب الأصلية
-  CURRENCY_I_ID       NUMBER(30)    NOT NULL REFERENCES CURRENCY_MAST(CURRENCY_I_ID),
+  currency_i_id       number(30)    not null references currency_mast(currency_i_id),
   -- العملة الأساسية للشركة (للتجميع الموحد)
-  BASE_CURRENCY_I_ID  NUMBER(30)    REFERENCES CURRENCY_MAST(CURRENCY_I_ID),
+  base_currency_i_id  number(30)    references currency_mast(currency_i_id),
   -- ─── أرصدة بعملة الحساب ───────────────────────────
   -- رصيد الافتتاح (من إغلاق الفترة السابقة)
-  GEN_F_OP_BAL        NUMBER(23,5)  DEFAULT 0,
-  GEN_C_OP_DRCR       CHAR(1)       DEFAULT 'D', -- D=مدين C=دائن
+  gen_f_op_bal        number(23,5)  default 0,
+  gen_c_op_drcr       char(1)       default 'd', -- d=مدين c=دائن
   -- إجمالي المدين خلال الفترة
-  GEN_F_DR_AMT        NUMBER(23,5)  DEFAULT 0,
+  gen_f_dr_amt        number(23,5)  default 0,
   -- إجمالي الدائن خلال الفترة
-  GEN_F_CR_AMT        NUMBER(23,5)  DEFAULT 0,
-  -- رصيد الإغلاق = OP_BAL ± (DR - CR)
-  GEN_F_CL_BAL        NUMBER(23,5)  DEFAULT 0,
-  GEN_C_CL_DRCR       CHAR(1)       DEFAULT 'D',
+  gen_f_cr_amt        number(23,5)  default 0,
+  -- رصيد الإغلاق = op_bal ± (dr - cr)
+  gen_f_cl_bal        number(23,5)  default 0,
+  gen_c_cl_drcr       char(1)       default 'd',
   -- ─── أرصدة بالعملة الأساسية (للتجميع) ────────────
-  GEN_F_OP_BAL_BASE   NUMBER(23,5)  DEFAULT 0,
-  GEN_F_DR_AMT_BASE   NUMBER(23,5)  DEFAULT 0,
-  GEN_F_CR_AMT_BASE   NUMBER(23,5)  DEFAULT 0,
-  GEN_F_CL_BAL_BASE   NUMBER(23,5)  DEFAULT 0,
-  GEN_C_CL_DRCR_BASE  CHAR(1)       DEFAULT 'D',
+  gen_f_op_bal_base   number(23,5)  default 0,
+  gen_f_dr_amt_base   number(23,5)  default 0,
+  gen_f_cr_amt_base   number(23,5)  default 0,
+  gen_f_cl_bal_base   number(23,5)  default 0,
+  gen_c_cl_drcr_base  char(1)       default 'd',
   -- سعر الصرف المستخدم في التحويل للعملة الأساسية
-  GEN_F_EXCH_RATE     NUMBER(23,8)  DEFAULT 1,
-  -- فروق إعادة التقييم (Forex Revaluation)
-  GEN_F_FOREX_DIFF    NUMBER(23,5)  DEFAULT 0,
+  gen_f_exch_rate     number(23,8)  default 1,
+  -- فروق إعادة التقييم (forex revaluation)
+  gen_f_forex_diff    number(23,5)  default 0,
   -- ─── معلومات التدقيق ─────────────────────────────
   -- عدد الحركات المُسجلة في هذه الفترة
-  GEN_I_TRN_COUNT     NUMBER(10)    DEFAULT 0,
-  -- حالة الفترة: O=مفتوحة Open, C=مغلقة Closed, L=مقفلة Locked
-  GEN_C_PERIOD_STS    CHAR(1)       DEFAULT 'O',
+  gen_i_trn_count     number(10)    default 0,
+  -- حالة الفترة: o=مفتوحة open, c=مغلقة closed, l=مقفلة locked
+  gen_c_period_sts    char(1)       default 'o',
   -- تاريخ آخر تحديث
-  GEN_D_LAST_UPDATE   DATE          DEFAULT SYSDATE,
-  user_i_id           NUMBER(30)    REFERENCES users(user_i_id),
+  gen_d_last_update   date          default sysdate,
+  user_i_id           number(30)    references users(user_i_id),
   -- منع تكرار نفس الحساب في نفس الفترة لنفس الفرع
-  CONSTRAINT uq_genldg UNIQUE (ACT_I_ID, AGENT_I_ID, GEN_I_YEAR, GEN_I_MONTH, CURRENCY_I_ID)
+  constraint uq_genldg unique (act_i_id, agent_i_id, gen_i_year, gen_i_month, currency_i_id)
 );
 
 -- فهارس لتسريع استخراج التقارير
-CREATE INDEX idx_gen_agent_period  ON GENLDG_MAST(AGENT_I_ID, GEN_I_YEAR, GEN_I_MONTH);
-CREATE INDEX idx_gen_country       ON GENLDG_MAST(COUNTRY_C_CODE, GEN_I_YEAR, GEN_I_MONTH);
-CREATE INDEX idx_gen_act_period    ON GENLDG_MAST(ACT_I_ID, GEN_I_YEAR, GEN_I_MONTH);
-CREATE INDEX idx_gen_period        ON GENLDG_MAST(GEN_I_YEAR, GEN_I_MONTH);
+create index idx_gen_agent_period  on genldg_mast(agent_i_id, gen_i_year, gen_i_month);
+create index idx_gen_country       on genldg_mast(country_c_code, gen_i_year, gen_i_month);
+create index idx_gen_act_period    on genldg_mast(act_i_id, gen_i_year, gen_i_month);
+create index idx_gen_period        on genldg_mast(gen_i_year, gen_i_month);
 
 -- ============================================================
--- 3. DAY_LEDG — دفتر اليومية (محسَّن)
+-- 3. day_ledg — دفتر اليومية (محسَّن)
 -- ============================================================
--- أُضيفت حقول: COUNTRY_C_CODE, EXCH_F_RATE, TRN_F_AMT_BASE
+-- أُضيفت حقول: country_c_code, exch_f_rate, trn_f_amt_base
 -- لدعم متعدد العملات والتجميع
 -- ============================================================
-CREATE TABLE DAY_LEDG
+create table day_ledg
 (
-  TRN_I_NO        NUMBER(30)    PRIMARY KEY,
-  AGENT_I_ID      NUMBER(30)    NOT NULL REFERENCES AGENT_MAST(AGENT_I_ID),
-  -- البلد (مشتق من AGENT_MAST لكنه مُخزَّن هنا لتسريع التقارير)
-  COUNTRY_C_CODE  VARCHAR2(10)  NOT NULL,
-  TRN_D_DATE      DATE          NOT NULL,
-  ACT_C_TYPE      VARCHAR2(10)  NOT NULL,
-  CUST_I_NO       NUMBER(20),
-  TRN_C_NARR      VARCHAR2(250),
+  trn_i_no        number(30)    primary key,
+  agent_i_id      number(30)    not null references agent_mast(agent_i_id),
+  -- البلد (مشتق من agent_mast لكنه مُخزَّن هنا لتسريع التقارير)
+  country_c_code  varchar2(10)  not null,
+  trn_d_date      date          not null,
+  act_c_type      varchar2(10)  not null,
+  cust_i_no       number(20),
+  trn_c_narr      varchar2(250),
   -- عملة الحركة
-  CURRENCY_I_ID   NUMBER(30)    NOT NULL REFERENCES CURRENCY_MAST(CURRENCY_I_ID),
+  currency_i_id   number(30)    not null references currency_mast(currency_i_id),
   -- مبلغ الحركة بعملة الحساب
-  TRN_F_TRNAMT    NUMBER(23,5)  NOT NULL,
-  TRN_C_DRCR      VARCHAR2(2)   NOT NULL,  -- DR أو CR
+  trn_f_trnamt    number(23,5)  not null,
+  trn_c_drcr      varchar2(2)   not null,  -- dr أو cr
   -- سعر الصرف وقت الحركة
-  EXCH_F_RATE     NUMBER(23,8)  DEFAULT 1,
+  exch_f_rate     number(23,8)  default 1,
   -- المبلغ بالعملة الأساسية للشركة (للتجميع)
-  TRN_F_AMT_BASE  NUMBER(23,5)  DEFAULT 0,
+  trn_f_amt_base  number(23,5)  default 0,
   -- ─── معلومات القيد ───────────────────────────────
-  TRT_C_TYPE      VARCHAR2(10),            -- نوع القيد: INV, PAY, JV, ...
-  TRN_C_STS       VARCHAR2(1)   DEFAULT 'P', -- P=معلق, A=معتمد, V=ملغى
-  SEQ_I_CODE      FLOAT,
-  TRN_C_CHQNO     VARCHAR2(10),
-  TRN_D_CHQDATE   DATE,
-  TRN_C_USRID     NUMBER(30)    REFERENCES users(user_i_id),
-  TRN_F_BALANCE   NUMBER(20,2), -- الرصيد التراكمي بعد الحركة
-  TRN_C_BALSTS    VARCHAR2(2),
-  TRN_C_TOTYPE    VARCHAR2(10),
-  TRN_I_TONO      FLOAT,
-  -- مرجع لجدول GENLDG_MAST (لتسهيل التتبع)
-  GEN_I_ID        NUMBER(30)    REFERENCES GENLDG_MAST(GEN_I_ID),
-  UTI             NUMBER(12)    DEFAULT 0 NOT NULL,
-  SCREEN_NAME     VARCHAR2(40)  DEFAULT 'No Screen Name' NOT NULL
+  trt_c_type      varchar2(10),            -- نوع القيد: inv, pay, jv, ...
+  trn_c_sts       varchar2(1)   default 'p', -- p=معلق, a=معتمد, v=ملغى
+  seq_i_code      float,
+  trn_c_chqno     varchar2(10),
+  trn_d_chqdate   date,
+  trn_c_usrid     number(30)    references users(user_i_id),
+  trn_f_balance   number(20,2), -- الرصيد التراكمي بعد الحركة
+  trn_c_balsts    varchar2(2),
+  trn_c_totype    varchar2(10),
+  trn_i_tono      float,
+  -- مرجع لجدول genldg_mast (لتسهيل التتبع)
+  gen_i_id        number(30)    references genldg_mast(gen_i_id),
+  uti             number(12)    default 0 not null,
+  screen_name     varchar2(40)  default 'no screen name' not null
 );
 
-CREATE INDEX idx_dayldg_agent_date ON DAY_LEDG(AGENT_I_ID, TRN_D_DATE);
-CREATE INDEX idx_dayldg_country    ON DAY_LEDG(COUNTRY_C_CODE, TRN_D_DATE);
-CREATE INDEX idx_dayldg_act        ON DAY_LEDG(ACT_C_TYPE, TRN_D_DATE);
-CREATE INDEX idx_dayldg_currency   ON DAY_LEDG(CURRENCY_I_ID, TRN_D_DATE);
+create index idx_dayldg_agent_date on day_ledg(agent_i_id, trn_d_date);
+create index idx_dayldg_country    on day_ledg(country_c_code, trn_d_date);
+create index idx_dayldg_act        on day_ledg(act_c_type, trn_d_date);
+create index idx_dayldg_currency   on day_ledg(currency_i_id, trn_d_date);
 
 -- ============================================================
--- 4. BATCH — القيود المجمعة (محسَّن)
+-- 4. batch — القيود المجمعة (محسَّن)
 -- ============================================================
-CREATE TABLE BATCH
+create table batch
 (
-  BBD_I_ID        NUMBER(30)    PRIMARY KEY,
-  AGENT_I_ID      NUMBER(30)    NOT NULL REFERENCES AGENT_MAST(AGENT_I_ID),
-  COUNTRY_C_CODE  VARCHAR2(10)  NOT NULL,
-  BBD_D_DATE      DATE          NOT NULL,
-  BBD_I_SLNO      NUMBER(20)    NOT NULL,
-  BBD_C_DRCR      VARCHAR2(2)   NOT NULL,
-  ACT_C_TYPE      VARCHAR2(10)  NOT NULL,
-  CUST_I_NO       NUMBER(20),
-  CURRENCY_I_ID   NUMBER(30)    NOT NULL REFERENCES CURRENCY_MAST(CURRENCY_I_ID),
-  BBD_F_AMT       NUMBER(23,5)  NOT NULL,
+  bbd_i_id        number(30)    primary key,
+  agent_i_id      number(30)    not null references agent_mast(agent_i_id),
+  country_c_code  varchar2(10)  not null,
+  bbd_d_date      date          not null,
+  bbd_i_slno      number(20)    not null,
+  bbd_c_drcr      varchar2(2)   not null,
+  act_c_type      varchar2(10)  not null,
+  cust_i_no       number(20),
+  currency_i_id   number(30)    not null references currency_mast(currency_i_id),
+  bbd_f_amt       number(23,5)  not null,
   -- مبلغ بالعملة الأساسية
-  BBD_F_AMT_BASE  NUMBER(23,5)  DEFAULT 0,
-  EXCH_F_RATE     NUMBER(23,8)  DEFAULT 1,
-  BBD_C_CHQNO     VARCHAR2(20),
-  BBD_C_CHQDT     DATE,
-  BBD_C_STS       VARCHAR2(2)   DEFAULT 'P', -- P=معلق, A=معتمد, V=ملغى
-  OPER_I_ID       NUMBER(20),
-  BBD_C_USRID     NUMBER(30)    REFERENCES users(user_i_id),
-  BBD_C_PAYEE     VARCHAR2(200),
-  BBD_F_ODAMT     NUMBER(23,5),
-  BBD_C_MODE      VARCHAR2(4),
+  bbd_f_amt_base  number(23,5)  default 0,
+  exch_f_rate     number(23,8)  default 1,
+  bbd_c_chqno     varchar2(20),
+  bbd_c_chqdt     date,
+  bbd_c_sts       varchar2(2)   default 'p', -- p=معلق, a=معتمد, v=ملغى
+  oper_i_id       number(20),
+  bbd_c_usrid     number(30)    references users(user_i_id),
+  bbd_c_payee     varchar2(200),
+  bbd_f_odamt     number(23,5),
+  bbd_c_mode      varchar2(4),
   -- مرجع لرقم الدفعة (لربط الأسطر ببعضها)
-  BATCH_REF_NO    VARCHAR2(30),
-  GEN_I_ID        NUMBER(30)    REFERENCES GENLDG_MAST(GEN_I_ID),
-  UTI             NUMBER(12)    DEFAULT 0 NOT NULL,
-  BBD_D_DATETIME  DATE          DEFAULT SYSDATE
+  batch_ref_no    varchar2(30),
+  gen_i_id        number(30)    references genldg_mast(gen_i_id),
+  uti             number(12)    default 0 not null,
+  bbd_d_datetime  date          default sysdate
 );
 
-CREATE INDEX idx_batch_agent_date ON BATCH(AGENT_I_ID, BBD_D_DATE);
-CREATE INDEX idx_batch_country    ON BATCH(COUNTRY_C_CODE, BBD_D_DATE);
-CREATE INDEX idx_batch_ref        ON BATCH(BATCH_REF_NO);
+create index idx_batch_agent_date on batch(agent_i_id, bbd_d_date);
+create index idx_batch_country    on batch(country_c_code, bbd_d_date);
+create index idx_batch_ref        on batch(batch_ref_no);
 
 -- ============================================================
--- 5. TREASURY_TRANSACTIONS — حركات الخزينة (محسَّن)
+-- 5. treasury_transactions — حركات الخزينة (محسَّن)
 -- ============================================================
-CREATE TABLE TREASURY_TRANSACTIONS
+create table treasury_transactions
 (
-  TRN_I_ID        NUMBER(30)    PRIMARY KEY,
-  AGENT_I_ID      NUMBER(30)    NOT NULL REFERENCES AGENT_MAST(AGENT_I_ID),
-  COUNTRY_C_CODE  VARCHAR2(10)  NOT NULL,
-  TRN_C_TYPE      VARCHAR2(20)  NOT NULL,  -- 'in' | 'out' | 'transfer'
-  CATEGORY_ID     NUMBER(30)    REFERENCES categories(categ_i_id),
-  PARTY_ID        NUMBER(30)    REFERENCES parties(parties_i_id),
-  INVOICE_ID      NUMBER(30)    REFERENCES invoices(invoice_i_id),
-  TRN_I_AMOUNT    NUMBER(23,5)  NOT NULL,
-  ACT_C_TYPE      VARCHAR2(10)  REFERENCES ACCOUNT_MAST(ACT_C_TYPE),
-  CURRENCY_I_ID   NUMBER(30)    NOT NULL REFERENCES CURRENCY_MAST(CURRENCY_I_ID),
-  EXCH_F_RATE     NUMBER(23,8)  DEFAULT 1,
+  trn_i_id        number(30)    primary key,
+  agent_i_id      number(30)    not null references agent_mast(agent_i_id),
+  country_c_code  varchar2(10)  not null,
+  trn_c_type      varchar2(20)  not null,  -- 'in' | 'out' | 'transfer'
+  category_id     number(30)    references categories(categ_i_id),
+  party_id        number(30)    references parties(parties_i_id),
+  invoice_id      number(30)    references invoices(invoice_i_id),
+  trn_i_amount    number(23,5)  not null,
+  act_c_type      varchar2(10)  references account_mast(act_c_type),
+  currency_i_id   number(30)    not null references currency_mast(currency_i_id),
+  exch_f_rate     number(23,8)  default 1,
   -- المبلغ بالعملة الأساسية
-  TRN_F_AMT_BASE  NUMBER(23,5)  DEFAULT 0,
-  CUST_I_NO       NUMBER(20),
-  TRN_D_DATE      DATE          NOT NULL,
-  DESCRIPTION     VARCHAR2(500),
-  TRN_C_STS       CHAR(1)       DEFAULT 'P',
-  SQE_I_CODE      NUMBER(5),
-  TRN_C_CHQNO     VARCHAR2(20),
-  TRN_D_CHQDATE   DATE,
-  TRN_F_BALANCE   NUMBER(23,5),
-  TRN_C_BALSTS    CHAR(2),
-  TRN_C_TO_TYPE   VARCHAR2(10),
-  TRN_I_TO_NO     NUMBER(20),
-  UTI             NUMBER(12)    DEFAULT 0 NOT NULL,
-  REFERENCE       VARCHAR2(255),
-  CREATED_BY      NUMBER(30)    REFERENCES users(user_i_id),
-  CREATED_AT      TIMESTAMP     DEFAULT CURRENT_TIMESTAMP,
-  GEN_I_ID        NUMBER(30)    REFERENCES GENLDG_MAST(GEN_I_ID)
+  trn_f_amt_base  number(23,5)  default 0,
+  cust_i_no       number(20),
+  trn_d_date      date          not null,
+  description     varchar2(500),
+  trn_c_sts       char(1)       default 'p',
+  sqe_i_code      number(5),
+  trn_c_chqno     varchar2(20),
+  trn_d_chqdate   date,
+  trn_f_balance   number(23,5),
+  trn_c_balsts    char(2),
+  trn_c_to_type   varchar2(10),
+  trn_i_to_no     number(20),
+  uti             number(12)    default 0 not null,
+  reference       varchar2(255),
+  created_by      number(30)    references users(user_i_id),
+  created_at      timestamp     default current_timestamp,
+  gen_i_id        number(30)    references genldg_mast(gen_i_id)
 );
 
-CREATE INDEX idx_treasury_agent_date ON TREASURY_TRANSACTIONS(AGENT_I_ID, TRN_D_DATE);
-CREATE INDEX idx_treasury_country    ON TREASURY_TRANSACTIONS(COUNTRY_C_CODE, TRN_D_DATE);
+create index idx_treasury_agent_date on treasury_transactions(agent_i_id, trn_d_date);
+create index idx_treasury_country    on treasury_transactions(country_c_code, trn_d_date);
 
 -- ============================================================
--- 6. ACCOUNTING_PERIOD — الفترات المحاسبية
+-- 6. accounting_period — الفترات المحاسبية
 -- ============================================================
 -- يتحكم في فتح وإغلاق الفترات المحاسبية لكل فرع.
 -- يمنع التسجيل في فترة مغلقة.
 -- ============================================================
-CREATE TABLE ACCOUNTING_PERIOD
+create table accounting_period
 (
-  PERIOD_I_ID     NUMBER(30)    PRIMARY KEY,
-  AGENT_I_ID      NUMBER(30)    NOT NULL REFERENCES AGENT_MAST(AGENT_I_ID),
-  PERIOD_I_YEAR   NUMBER(4)     NOT NULL,
-  PERIOD_I_MONTH  NUMBER(2)     NOT NULL,  -- 1-12
-  PERIOD_D_FROM   DATE          NOT NULL,
-  PERIOD_D_TO     DATE          NOT NULL,
-  -- O=مفتوحة, C=مغلقة (لا تسمح بقيود), L=مقفلة (بعد الإغلاق السنوي)
-  PERIOD_C_STS    CHAR(1)       DEFAULT 'O',
-  PERIOD_D_CLOSED DATE,
-  CLOSED_BY       NUMBER(30)    REFERENCES users(user_i_id),
-  PERIOD_C_NOTES  VARCHAR2(250),
-  CREATED_AT      TIMESTAMP     DEFAULT CURRENT_TIMESTAMP,
-  CONSTRAINT uq_period UNIQUE (AGENT_I_ID, PERIOD_I_YEAR, PERIOD_I_MONTH)
+  period_i_id     number(30)    primary key,
+  agent_i_id      number(30)    not null references agent_mast(agent_i_id),
+  period_i_year   number(4)     not null,
+  period_i_month  number(2)     not null,  -- 1-12
+  period_d_from   date          not null,
+  period_d_to     date          not null,
+  -- o=مفتوحة, c=مغلقة (لا تسمح بقيود), l=مقفلة (بعد الإغلاق السنوي)
+  period_c_sts    char(1)       default 'o',
+  period_d_closed date,
+  closed_by       number(30)    references users(user_i_id),
+  period_c_notes  varchar2(250),
+  created_at      timestamp     default current_timestamp,
+  constraint uq_period unique (agent_i_id, period_i_year, period_i_month)
 );
 
 -- ============================================================
--- 7. JOURNAL_ENTRY — رأس القيد اليومي (Journal Voucher)
+-- 7. journal_entry — رأس القيد اليومي (journal voucher)
 -- ============================================================
--- يجمع أسطر DAY_LEDG في مجموعة واحدة متوازنة (DR = CR).
+-- يجمع أسطر day_ledg في مجموعة واحدة متوازنة (dr = cr).
 -- يضمن عدم حفظ قيد غير متوازن.
 -- ============================================================
-CREATE TABLE JOURNAL_ENTRY
+create table journal_entry
 (
-  JV_I_ID         NUMBER(30)    PRIMARY KEY,
-  JV_C_REF        VARCHAR2(30)  UNIQUE NOT NULL, -- رقم القيد مثل JV-2026-00001
-  AGENT_I_ID      NUMBER(30)    NOT NULL REFERENCES AGENT_MAST(AGENT_I_ID),
-  COUNTRY_C_CODE  VARCHAR2(10)  NOT NULL,
-  JV_D_DATE       DATE          NOT NULL,
-  PERIOD_I_ID     NUMBER(30)    REFERENCES ACCOUNTING_PERIOD(PERIOD_I_ID),
-  JV_C_TYPE       VARCHAR2(20)  NOT NULL, -- JV=يدوي, INV=فاتورة, PAY=دفع, SAL=راتب
-  JV_C_NARR       VARCHAR2(500),
+  jv_i_id         number(30)    primary key,
+  jv_c_ref        varchar2(30)  unique not null, -- رقم القيد مثل jv-2026-00001
+  agent_i_id      number(30)    not null references agent_mast(agent_i_id),
+  country_c_code  varchar2(10)  not null,
+  jv_d_date       date          not null,
+  period_i_id     number(30)    references accounting_period(period_i_id),
+  jv_c_type       varchar2(20)  not null, -- jv=يدوي, inv=فاتورة, pay=دفع, sal=راتب
+  jv_c_narr       varchar2(500),
   -- إجمالي المدين (يجب أن يساوي إجمالي الدائن)
-  JV_F_TOTAL_DR   NUMBER(23,5)  DEFAULT 0,
-  JV_F_TOTAL_CR   NUMBER(23,5)  DEFAULT 0,
-  CURRENCY_I_ID   NUMBER(30)    NOT NULL REFERENCES CURRENCY_MAST(CURRENCY_I_ID),
-  EXCH_F_RATE     NUMBER(23,8)  DEFAULT 1,
-  -- O=مسودة, P=معلق للاعتماد, A=معتمد, V=ملغى
-  JV_C_STS        CHAR(1)       DEFAULT 'O',
-  APPROVED_BY     NUMBER(30)    REFERENCES users(user_i_id),
-  APPROVED_AT     DATE,
-  CREATED_BY      NUMBER(30)    REFERENCES users(user_i_id),
-  CREATED_AT      TIMESTAMP     DEFAULT CURRENT_TIMESTAMP
+  jv_f_total_dr   number(23,5)  default 0,
+  jv_f_total_cr   number(23,5)  default 0,
+  currency_i_id   number(30)    not null references currency_mast(currency_i_id),
+  exch_f_rate     number(23,8)  default 1,
+  -- o=مسودة, p=معلق للاعتماد, a=معتمد, v=ملغى
+  jv_c_sts        char(1)       default 'o',
+  approved_by     number(30)    references users(user_i_id),
+  approved_at     date,
+  created_by      number(30)    references users(user_i_id),
+  created_at      timestamp     default current_timestamp
 );
 
-CREATE INDEX idx_jv_agent_date ON JOURNAL_ENTRY(AGENT_I_ID, JV_D_DATE);
-CREATE INDEX idx_jv_period     ON JOURNAL_ENTRY(PERIOD_I_ID);
-CREATE INDEX idx_jv_type       ON JOURNAL_ENTRY(JV_C_TYPE, JV_D_DATE);
+create index idx_jv_agent_date on journal_entry(agent_i_id, jv_d_date);
+create index idx_jv_period     on journal_entry(period_i_id);
+create index idx_jv_type       on journal_entry(jv_c_type, jv_d_date);
 
 -- ============================================================
--- 8. Views للتقارير الجاهزة
+-- 8. views للتقارير الجاهزة
 -- ============================================================
 
 -- ─── ميزان المراجعة — على مستوى الفرع ─────────────────────
-CREATE OR REPLACE VIEW V_TRIAL_BALANCE_AGENT AS
-SELECT
-  g.AGENT_I_ID,
-  g.COUNTRY_C_CODE,
-  g.GEN_I_YEAR,
-  g.GEN_I_MONTH,
-  a.ACT_C_TYPE,
-  a.ACT_C_NAME,
-  sl.SUB_C_LDGDESC    AS SUB_LEDGER_NAME,
-  ml.LDG_C_DESC       AS MAIN_LEDGER_NAME,
-  lg.GROUP_C_DESC     AS GROUP_NAME,
-  lg.GROUP_C_TYPE     AS GROUP_TYPE,  -- A=أصول, L=خصوم, I=إيراد, E=مصروف
-  g.CURRENCY_I_ID,
+create or replace view v_trial_balance_agent as
+select
+  g.agent_i_id,
+  g.country_c_code,
+  g.gen_i_year,
+  g.gen_i_month,
+  a.act_c_type,
+  a.act_c_name,
+  sl.sub_c_ldgdesc    as sub_ledger_name,
+  ml.ldg_c_desc       as main_ledger_name,
+  lg.group_c_desc     as group_name,
+  lg.group_c_type     as group_type,  -- a=أصول, l=خصوم, i=إيراد, e=مصروف
+  g.currency_i_id,
   -- بعملة الحساب
-  g.GEN_F_OP_BAL,
-  g.GEN_C_OP_DRCR,
-  g.GEN_F_DR_AMT,
-  g.GEN_F_CR_AMT,
-  g.GEN_F_CL_BAL,
-  g.GEN_C_CL_DRCR,
+  g.gen_f_op_bal,
+  g.gen_c_op_drcr,
+  g.gen_f_dr_amt,
+  g.gen_f_cr_amt,
+  g.gen_f_cl_bal,
+  g.gen_c_cl_drcr,
   -- بالعملة الأساسية
-  g.GEN_F_CL_BAL_BASE,
-  g.GEN_C_CL_DRCR_BASE,
-  g.GEN_F_EXCH_RATE
-FROM GENLDG_MAST g
-JOIN ACCOUNT_MAST  a  ON g.ACT_I_ID   = a.ACT_I_ID
-JOIN SUBLDG_MAST   sl ON a.SUB_I_ID   = sl.SUB_I_ID
-JOIN MAINLDG_MAST  ml ON sl.LDG_I_ID  = ml.LDG_I_ID
-JOIN LEDGER_GROUP  lg ON ml.GROUP_I_ID = lg.GROUP_I_ID;
+  g.gen_f_cl_bal_base,
+  g.gen_c_cl_drcr_base,
+  g.gen_f_exch_rate
+from genldg_mast g
+join account_mast  a  on g.act_i_id   = a.act_i_id
+join subldg_mast   sl on a.sub_i_id   = sl.sub_i_id
+join mainldg_mast  ml on sl.ldg_i_id  = ml.ldg_i_id
+join ledger_group  lg on ml.group_i_id = lg.group_i_id;
 
 -- ─── ميزان المراجعة — على مستوى البلد ─────────────────────
-CREATE OR REPLACE VIEW V_TRIAL_BALANCE_COUNTRY AS
-SELECT
-  COUNTRY_C_CODE,
-  GEN_I_YEAR,
-  GEN_I_MONTH,
-  ACT_C_TYPE,
-  BASE_CURRENCY_I_ID,
-  SUM(GEN_F_DR_AMT_BASE)  AS TOTAL_DR,
-  SUM(GEN_F_CR_AMT_BASE)  AS TOTAL_CR,
-  SUM(
-    CASE GEN_C_CL_DRCR_BASE
-      WHEN 'D' THEN  GEN_F_CL_BAL_BASE
-      ELSE          -GEN_F_CL_BAL_BASE
-    END
-  ) AS NET_BAL_BASE
-FROM GENLDG_MAST
-GROUP BY COUNTRY_C_CODE, GEN_I_YEAR, GEN_I_MONTH, ACT_C_TYPE, BASE_CURRENCY_I_ID;
+create or replace view v_trial_balance_country as
+select
+  country_c_code,
+  gen_i_year,
+  gen_i_month,
+  act_c_type,
+  base_currency_i_id,
+  sum(gen_f_dr_amt_base)  as total_dr,
+  sum(gen_f_cr_amt_base)  as total_cr,
+  sum(
+    case gen_c_cl_drcr_base
+      when 'd' then  gen_f_cl_bal_base
+      else          -gen_f_cl_bal_base
+    end
+  ) as net_bal_base
+from genldg_mast
+group by country_c_code, gen_i_year, gen_i_month, act_c_type, base_currency_i_id;
 
 -- ─── ميزان المراجعة — على مستوى الشركة كاملاً ─────────────
-CREATE OR REPLACE VIEW V_TRIAL_BALANCE_COMPANY AS
-SELECT
-  GEN_I_YEAR,
-  GEN_I_MONTH,
-  ACT_C_TYPE,
-  BASE_CURRENCY_I_ID,
-  SUM(GEN_F_DR_AMT_BASE)  AS TOTAL_DR,
-  SUM(GEN_F_CR_AMT_BASE)  AS TOTAL_CR,
-  SUM(
-    CASE GEN_C_CL_DRCR_BASE
-      WHEN 'D' THEN  GEN_F_CL_BAL_BASE
-      ELSE          -GEN_F_CL_BAL_BASE
-    END
-  ) AS NET_BAL_BASE
-FROM GENLDG_MAST
-GROUP BY GEN_I_YEAR, GEN_I_MONTH, ACT_C_TYPE, BASE_CURRENCY_I_ID;
+create or replace view v_trial_balance_company as
+select
+  gen_i_year,
+  gen_i_month,
+  act_c_type,
+  base_currency_i_id,
+  sum(gen_f_dr_amt_base)  as total_dr,
+  sum(gen_f_cr_amt_base)  as total_cr,
+  sum(
+    case gen_c_cl_drcr_base
+      when 'd' then  gen_f_cl_bal_base
+      else          -gen_f_cl_bal_base
+    end
+  ) as net_bal_base
+from genldg_mast
+group by gen_i_year, gen_i_month, act_c_type, base_currency_i_id;
 
--- ─── الميزانية العمومية — Balance Sheet ─────────────────────
-CREATE OR REPLACE VIEW V_BALANCE_SHEET_COMPANY AS
-SELECT
-  GEN_I_YEAR,
-  GEN_I_MONTH,
-  BASE_CURRENCY_I_ID,
+-- ─── الميزانية العمومية — balance sheet ─────────────────────
+create or replace view v_balance_sheet_company as
+select
+  gen_i_year,
+  gen_i_month,
+  base_currency_i_id,
   -- الأصول
-  SUM(CASE WHEN lg.GROUP_C_TYPE = 'A' THEN
-    CASE g.GEN_C_CL_DRCR_BASE WHEN 'D' THEN g.GEN_F_CL_BAL_BASE ELSE -g.GEN_F_CL_BAL_BASE END
-  ELSE 0 END) AS TOTAL_ASSETS,
+  sum(case when lg.group_c_type = 'a' then
+    case g.gen_c_cl_drcr_base when 'd' then g.gen_f_cl_bal_base else -g.gen_f_cl_bal_base end
+  else 0 end) as total_assets,
   -- الخصوم
-  SUM(CASE WHEN lg.GROUP_C_TYPE = 'L' THEN
-    CASE g.GEN_C_CL_DRCR_BASE WHEN 'C' THEN g.GEN_F_CL_BAL_BASE ELSE -g.GEN_F_CL_BAL_BASE END
-  ELSE 0 END) AS TOTAL_LIABILITIES,
+  sum(case when lg.group_c_type = 'l' then
+    case g.gen_c_cl_drcr_base when 'c' then g.gen_f_cl_bal_base else -g.gen_f_cl_bal_base end
+  else 0 end) as total_liabilities,
   -- حقوق الملكية
-  SUM(CASE WHEN lg.GROUP_C_TYPE = 'E' THEN
-    CASE g.GEN_C_CL_DRCR_BASE WHEN 'C' THEN g.GEN_F_CL_BAL_BASE ELSE -g.GEN_F_CL_BAL_BASE END
-  ELSE 0 END) AS TOTAL_EQUITY
-FROM GENLDG_MAST g
-JOIN ACCOUNT_MAST a  ON g.ACT_I_ID    = a.ACT_I_ID
-JOIN SUBLDG_MAST  sl ON a.SUB_I_ID    = sl.SUB_I_ID
-JOIN MAINLDG_MAST ml ON sl.LDG_I_ID   = ml.LDG_I_ID
-JOIN LEDGER_GROUP lg ON ml.GROUP_I_ID = lg.GROUP_I_ID
-GROUP BY GEN_I_YEAR, GEN_I_MONTH, BASE_CURRENCY_I_ID;
+  sum(case when lg.group_c_type = 'e' then
+    case g.gen_c_cl_drcr_base when 'c' then g.gen_f_cl_bal_base else -g.gen_f_cl_bal_base end
+  else 0 end) as total_equity
+from genldg_mast g
+join account_mast a  on g.act_i_id    = a.act_i_id
+join subldg_mast  sl on a.sub_i_id    = sl.sub_i_id
+join mainldg_mast ml on sl.ldg_i_id   = ml.ldg_i_id
+join ledger_group lg on ml.group_i_id = lg.group_i_id
+group by gen_i_year, gen_i_month, base_currency_i_id;
 
--- ─── قائمة الدخل — Income Statement ─────────────────────────
-CREATE OR REPLACE VIEW V_INCOME_STATEMENT_COMPANY AS
-SELECT
-  GEN_I_YEAR,
-  GEN_I_MONTH,
-  BASE_CURRENCY_I_ID,
+-- ─── قائمة الدخل — income statement ─────────────────────────
+create or replace view v_income_statement_company as
+select
+  gen_i_year,
+  gen_i_month,
+  base_currency_i_id,
   -- الإيرادات
-  SUM(CASE WHEN lg.GROUP_C_TYPE = 'I' THEN
-    CASE g.GEN_C_CL_DRCR_BASE WHEN 'C' THEN g.GEN_F_CL_BAL_BASE ELSE -g.GEN_F_CL_BAL_BASE END
-  ELSE 0 END) AS TOTAL_REVENUE,
+  sum(case when lg.group_c_type = 'i' then
+    case g.gen_c_cl_drcr_base when 'c' then g.gen_f_cl_bal_base else -g.gen_f_cl_bal_base end
+  else 0 end) as total_revenue,
   -- المصروفات
-  SUM(CASE WHEN lg.GROUP_C_TYPE = 'X' THEN
-    CASE g.GEN_C_CL_DRCR_BASE WHEN 'D' THEN g.GEN_F_CL_BAL_BASE ELSE -g.GEN_F_CL_BAL_BASE END
-  ELSE 0 END) AS TOTAL_EXPENSES,
+  sum(case when lg.group_c_type = 'x' then
+    case g.gen_c_cl_drcr_base when 'd' then g.gen_f_cl_bal_base else -g.gen_f_cl_bal_base end
+  else 0 end) as total_expenses,
   -- صافي الربح/الخسارة
-  SUM(CASE
-    WHEN lg.GROUP_C_TYPE = 'I' THEN
-      CASE g.GEN_C_CL_DRCR_BASE WHEN 'C' THEN  g.GEN_F_CL_BAL_BASE ELSE -g.GEN_F_CL_BAL_BASE END
-    WHEN lg.GROUP_C_TYPE = 'X' THEN
-      CASE g.GEN_C_CL_DRCR_BASE WHEN 'D' THEN -g.GEN_F_CL_BAL_BASE ELSE  g.GEN_F_CL_BAL_BASE END
-    ELSE 0
-  END) AS NET_PROFIT_LOSS
-FROM GENLDG_MAST g
-JOIN ACCOUNT_MAST a  ON g.ACT_I_ID    = a.ACT_I_ID
-JOIN SUBLDG_MAST  sl ON a.SUB_I_ID    = sl.SUB_I_ID
-JOIN MAINLDG_MAST ml ON sl.LDG_I_ID   = ml.LDG_I_ID
-JOIN LEDGER_GROUP lg ON ml.GROUP_I_ID = lg.GROUP_I_ID
-WHERE lg.GROUP_C_TYPE IN ('I', 'X')
-GROUP BY GEN_I_YEAR, GEN_I_MONTH, BASE_CURRENCY_I_ID;
+  sum(case
+    when lg.group_c_type = 'i' then
+      case g.gen_c_cl_drcr_base when 'c' then  g.gen_f_cl_bal_base else -g.gen_f_cl_bal_base end
+    when lg.group_c_type = 'x' then
+      case g.gen_c_cl_drcr_base when 'd' then -g.gen_f_cl_bal_base else  g.gen_f_cl_bal_base end
+    else 0
+  end) as net_profit_loss
+from genldg_mast g
+join account_mast a  on g.act_i_id    = a.act_i_id
+join subldg_mast  sl on a.sub_i_id    = sl.sub_i_id
+join mainldg_mast ml on sl.ldg_i_id   = ml.ldg_i_id
+join ledger_group lg on ml.group_i_id = lg.group_i_id
+where lg.group_c_type in ('i', 'x')
+group by gen_i_year, gen_i_month, base_currency_i_id;
 
 -- ============================================================
--- END OF ACCOUNTING SCHEMA
+-- end of accounting schema
 -- الجداول الجديدة: 6
--- الـ Views الجاهزة: 5
+-- الـ views الجاهزة: 5
 -- ============================================================
