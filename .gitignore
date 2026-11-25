@@ -541,3 +541,7 @@ password_reset_tokens.sql
 index.xhtml
 docs/
 
+
+# Temp & Log files
+*.log
+new *.txt
