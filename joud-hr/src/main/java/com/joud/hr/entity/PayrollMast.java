@@ -5,7 +5,8 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
-
+@Entity
+@Table(name = "payroll_mast")
 public class PayrollMast {
 
     public enum PayrollStatus { D, A, P, V }

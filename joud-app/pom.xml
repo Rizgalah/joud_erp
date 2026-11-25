@@ -17,7 +17,7 @@
     <artifactId>joud-app</artifactId>
     <packaging>war</packaging>
 
-    <name>Joud ERP Application</name>
+    <name>Joud Application</name>
     <description>التطبيق النهائي — يجمع جميع وحدات Joud ERP في WAR واحد قابل للنشر</description>
 
     <properties>
@@ -72,6 +72,12 @@
         <dependency>
             <groupId>com.joud</groupId>
             <artifactId>joud-dashboard</artifactId>
+            <version>1.0.0</version>
+            <type>jar</type>
+        </dependency>
+        <dependency>
+            <groupId>com.joud</groupId>
+            <artifactId>joud-notification</artifactId>
             <version>1.0.0</version>
             <type>jar</type>
         </dependency>
@@ -182,8 +188,12 @@
             <artifactId>weld-servlet-shaded</artifactId>
             <version>5.1.2.Final</version>
         </dependency>
-        <!-- أضف هذا داخل pom.xml الخاص بـ joud-app -->
-
+        <!--  للاختبار أضف هذا داخل pom.xml الخاص بـ joud-app -->
+        <dependency>
+           <groupId>org.junit.jupiter</groupId>
+           <artifactId>junit-jupiter</artifactId>
+           <scope>test</scope>
+        </dependency>
 
    <!-- ════════════════════════════════════════════════════
      Jersey REST API Dependencies (Jakarta EE 10 Compatible)

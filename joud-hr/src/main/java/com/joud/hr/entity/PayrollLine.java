@@ -2,7 +2,8 @@ package com.joud.hr.entity;
 
 import jakarta.persistence.*;
 import java.math.BigDecimal;
-
+@Entity
+@Table(name = "payroll_line")
 public class PayrollLine {
 
     @Id

@@ -3,7 +3,8 @@ package com.joud.trade.entity;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
-
+@Entity
+@Table(name = "parties")
 public class Party {
 
     public enum PartyType {

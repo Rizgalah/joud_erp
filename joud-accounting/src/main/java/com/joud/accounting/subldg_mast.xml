@@ -1,0 +1,192 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:h="jakarta.faces.html"
+                xmlns:f="jakarta.faces.core"
+                xmlns:p="http://primefaces.org/ui"
+                xmlns:ui="jakarta.faces.facelets"
+                template="/WEB-INF/template.xhtml">
+
+<ui:define name="pageTitle">إدارة الحسابات المساعدة</ui:define>
+
+<ui:define name="extraStyles">
+    <h:outputStylesheet library="css" name="accounting.css"/>
+    <style>
+        .subldg-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+        }
+        .subldg-field label {
+            display: block;
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 4px;
+        }
+    </style>
+</ui:define>
+
+<ui:define name="content">
+<h:form id="subldgForm">
+
+    <p:messages id="messages" showDetail="false" closable="true">
+        <p:autoUpdate/>
+    </p:messages>
+
+    <!-- فورم الإدخال والتعديل -->
+    <div class="joud-card" style="margin-bottom:16px">
+        <div class="joud-card-header">
+            <span class="joud-card-title">
+                <i class="pi pi-sitemap" style="margin-left:8px;color:#2E75B6"/>
+                إدارة الحسابات المساعدة (Subsidiary Ledger)
+            </span>
+            <div style="display:flex;gap:8px">
+                <p:commandButton value="حفظ الحساب"
+                                 icon="pi pi-save"
+                                 styleClass="p-button-success"
+                                 action="#{subldgMastController.save}"
+                                 process="@this :subldgForm:formFieldsPanel"
+                                 update=":subldgForm:formFieldsPanel :subldgForm:subldgTable :subldgForm:messages"/>
+
+                <p:commandButton value="جديد / تصفية"
+                                 icon="pi pi-refresh"
+                                 styleClass="p-button-outlined p-button-secondary"
+                                 action="#{subldgMastController.clear}"
+                                 process="@this"
+                                 update=":subldgForm:formFieldsPanel :subldgForm:messages"/>
+            </div>
+        </div>
+
+        <p:outputPanel id="formFieldsPanel" layout="block" style="padding:14px">
+            <div class="subldg-grid">
+                <div class="subldg-field">
+                    <label>الحساب الرئيسي (ID)</label>
+                    <p:inputText value="#{subldgMastController.subldg.ldgId}" style="width:100%"/>
+                </div>
+
+                <div class="subldg-field">
+                    <label>اسم الحساب المساعد</label>
+                    <p:inputText value="#{subldgMastController.subldg.subLdgDesc}"
+                                 required="true"
+                                 requiredMessage="اسم الحساب المساعد مطلوب"
+                                 style="width:100%"/>
+                </div>
+
+                <div class="subldg-field">
+                    <label>نوع الحساب</label>
+                    <p:inputText value="#{subldgMastController.subldg.subType}"
+                                 required="true"
+                                 maxlength="1"
+                                 style="width:100%"/>
+                </div>
+
+                <div class="subldg-field">
+                    <label>مؤشر التحقق (Revalid)</label>
+                    <p:inputText value="#{subldgMastController.subldg.subRevalid}"
+                                 required="true"
+                                 maxlength="1"
+                                 style="width:100%"/>
+                </div>
+
+                <div class="subldg-field">
+                    <label>مجموعة الدفتر (Group ID)</label>
+                    <p:inputText value="#{subldgMastController.subldg.groupId}" style="width:100%"/>
+                </div>
+
+                <div class="subldg-field">
+                    <label>نوع الحركة (Act Type)</label>
+                    <p:inputText value="#{subldgMastController.subldg.actType}"
+                                 required="true"
+                                 style="width:100%"/>
+                </div>
+
+                <div class="subldg-field">
+                    <label>حساب الأرباح (Profit Calc)</label>
+                    <p:inputText value="#{subldgMastController.subldg.profitCalc}"
+                                 maxlength="1"
+                                 style="width:100%"/>
+                </div>
+
+                <div class="subldg-field">
+                    <label>فئة الحساب (Class)</label>
+                    <p:inputText value="#{subldgMastController.subldg.actClass}" style="width:100%"/>
+                </div>
+
+                <div class="subldg-field">
+                    <label>طبيعة الحساب (Nature)</label>
+                    <p:inputText value="#{subldgMastController.subldg.actNature}" style="width:100%"/>
+                </div>
+
+                <div class="subldg-field">
+                    <label>مؤشر الموازنة (Budget Flag)</label>
+                    <p:inputText value="#{subldgMastController.subldg.budFlag}"
+                                 maxlength="1"
+                                 style="width:100%"/>
+                </div>
+
+                <div class="subldg-field">
+                    <label>المستخدم (User ID)</label>
+                    <p:inputText value="#{subldgMastController.subldg.userId}" style="width:100%"/>
+                </div>
+            </div>
+        </p:outputPanel>
+    </div>
+
+    <!-- جدول استعراض البيانات -->
+    <div class="joud-card">
+        <div class="joud-card-header">
+            <span class="joud-card-title">
+                <i class="pi pi-table" style="margin-left:8px;color:#2E75B6"/>
+                قائمة الحسابات المساعدة
+            </span>
+        </div>
+
+        <p:dataTable id="subldgTable"
+                     value="#{subldgMastController.subldgList}"
+                     var="item"
+                     styleClass="report-table"
+                     rows="10"
+                     paginator="true"
+                     emptyMessage="لا توجد حسابات مساعدة مسجلة">
+
+            <p:column headerText="الرقم الفريد" style="width:120px">
+                <h:outputText value="#{item.id}"/>
+            </p:column>
+
+            <p:column headerText="اسم الحساب المساعد">
+                <h:outputText value="#{item.subLdgDesc}"/>
+            </p:column>
+
+            <p:column headerText="النوع" style="width:90px;text-align:center">
+                <h:outputText value="#{item.subType}"/>
+            </p:column>
+
+            <p:column headerText="المجموعة" style="width:110px;text-align:center">
+                <h:outputText value="#{item.groupId}"/>
+            </p:column>
+
+            <p:column headerText="طبيعة الحساب" style="width:130px">
+                <h:outputText value="#{item.actNature}"/>
+            </p:column>
+
+            <p:column headerText="عمليات التحكم" style="width:150px;text-align:center">
+                <p:commandButton icon="pi pi-pencil"
+                                 title="تعديل"
+                                 styleClass="p-button-warning p-button-text p-button-sm"
+                                 action="#{subldgMastController.selectForEdit(item)}"
+                                 process="@this"
+                                 update=":subldgForm:formFieldsPanel :subldgForm:messages"/>
+
+                <p:commandButton icon="pi pi-trash"
+                                 title="حذف"
+                                 styleClass="p-button-danger p-button-text p-button-sm"
+                                 action="#{subldgMastController.delete(item)}"
+                                 process="@this"
+                                 update=":subldgForm:subldgTable :subldgForm:messages"
+                                 onclick="return confirm('هل أنت متأكد من حذف هذا الحساب؟');"/>
+            </p:column>
+        </p:dataTable>
+    </div>
+
+</h:form>
+</ui:define>
+</ui:composition>

@@ -4,7 +4,8 @@ import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-
+@Entity
+@Table(name = "salary_struct")
 public class SalaryStruct {
 
     @Id

@@ -1,9 +1,9 @@
 package com.joud.core.security.bean;
 
+import com.joud.core.event.PasswordResetRequestedEvent;
 import com.joud.core.security.service.PasswordResetService;
-import com.joud.notification.service.PasswordResetEmailService;
-
-import jakarta.enterprise.context.ViewScoped;
+import jakarta.faces.view.ViewScoped;
+import jakarta.enterprise.event.Event;
 import jakarta.faces.application.FacesMessage;
 import jakarta.faces.context.FacesContext;
 import jakarta.inject.Inject;
@@ -26,7 +26,7 @@ import java.util.Optional;
 public class ForgotPasswordBean implements Serializable {
 
     @Inject private PasswordResetService      resetService;
-    @Inject private PasswordResetEmailService emailService;
+    @Inject private Event<PasswordResetRequestedEvent> resetRequestedEvent;
 
     private String  email;
     private boolean sent = false;
@@ -42,9 +42,13 @@ public class ForgotPasswordBean implements Serializable {
         try {
             Optional<String> tokenOpt = resetService.generateResetToken(email.trim().toLowerCase());
 
-            if (tokenOpt.isPresent()) {
+         /*   if (tokenOpt.isPresent()) {
                 // إرسال البريد بشكل غير متزامن (Virtual Threads)
                 emailService.sendPasswordResetAsync(email.trim(), tokenOpt.get());
+            }*/
+            if (tokenOpt.isPresent()) {
+            	// إرسال البريد بشكل غير متزامن (Virtual Threads)
+                resetRequestedEvent.fire(new PasswordResetRequestedEvent(email.trim(), tokenOpt.get()));
             }
             // نُظهر نفس الرسالة دائماً (Timing-safe — لا نكشف هل البريد موجود أم لا)
             sent = true;

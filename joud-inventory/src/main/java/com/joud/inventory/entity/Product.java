@@ -3,7 +3,8 @@ package com.joud.inventory.entity;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
-
+@Entity
+@Table(name = "products")
 public class Product {
 
     @Id

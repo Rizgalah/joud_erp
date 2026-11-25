@@ -1,7 +1,8 @@
 package com.joud.hr.entity;
 
 import jakarta.persistence.*;
-
+@Entity
+@Table(name = "leave_type")
 public class LeaveType {
 
     @Id
